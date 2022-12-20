@@ -27,7 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-__version__ = "22.12a1"
+__version__ = "22.12a2"
 
 
 @dataclass
