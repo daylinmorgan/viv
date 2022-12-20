@@ -20,4 +20,9 @@ install:
 uninstall:
 	rm ~/bin/viv
 
-.PHONY: env lint install uninstall bump-version types
+docs: docs/demo.gif
+
+docs/%.gif: docs/%.tape
+	vhs < $<
+
+.PHONY: env lint install uninstall bump-version types docs

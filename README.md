@@ -1,4 +1,15 @@
-# Viv isn't venv
+# Viv
+
+<!-- PROJECT DEMO -->
+<div align="center">
+  <a href="https://github.com/daylinmorgan/viv">
+    <img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/demo.gif" alt="Logo" width=600 >
+  </a>
+  <p align="center">
+  viv isn't venv
+  </p>
+</div>
+<br />
 
 ## Setup
 
@@ -32,7 +43,8 @@ viv remove $(viv list -q)
 
 
 ## TODO
-- [ ] add doc strings to `src/viv.py`
+
+- [ ] add doc strings to `src/viv/viv.py`
 - [ ] use config file (probably ini or json / could also allow toml for python>=3.11)
 - [ ] enable a garbage collection based on time or file existence (configurable)
 - [ ] unit tests
