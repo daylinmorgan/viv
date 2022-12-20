@@ -262,7 +262,7 @@ def get_hash(package_spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
     # generate unique venvs for unique python exe's
     if track_exe:
         pkg_hash.update(str(Path(sys.executable).resolve()).encode())
-
+    
     return pkg_hash.hexdigest()
 
 
@@ -277,7 +277,7 @@ class ViVenv:
         path: Path | None = None,
     ) -> None:
         self.spec = spec
-        self.exe = sys.executable if track_exe else "N/A"
+        self.exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
         self.build_id = build_id if build_id else get_hash(spec, track_exe)
         self.name = name if name else self.build_id
         self.path = path if path else c.venvcache / self.name
@@ -326,6 +326,8 @@ class ViVenv:
         )
 
     def dump_info(self, write=False):
+        # TODO: include associated files in 'info'
+        # means it needs to be loaded first
         info = {
             "created": str(datetime.today()),
             "build_id": self.build_id,
