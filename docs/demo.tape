@@ -21,4 +21,3 @@ Sleep 2s
 Type "python examples/cli.py goodbye 'prospective viv user!'"
 Enter
 Sleep 2s
-

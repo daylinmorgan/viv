@@ -91,7 +91,7 @@ class Spinner:
             self.thread = threading.Thread(target=self.spinner_task)
             self.thread.start()
 
-    def __exit__(self, exc_type, exc_val, exc_traceback):
+    def __exit__(self, exc_type, exc_val, exc_traceback):  # noqa
         if sys.stdout.isatty():
             self.busy = False
             self.remove_spinner(cleanup=True)
@@ -320,7 +320,7 @@ class ViVenv:
 
         run(
             cmd,
-            spinmsg=f"installing packages in vivenv",
+            spinmsg="installing packages in vivenv",
             clean_up_path=self.path,
             verbose=bool(os.getenv("VIV_VERBOSE")),
         )
@@ -344,6 +344,14 @@ class ViVenv:
 
 
 def activate(*packages: str, track_exe: bool = False, name: str = "") -> None:
+    """create a vivenv and append to sys.path
+
+    Args:
+        packages: package specifications with optional version specifiers
+        track_exe: if true make env python exe specific
+        name: use as vivenv name, if not provided build_id is used
+    """
+
     vivenv = ViVenv(validate_spec(packages), track_exe=track_exe, name=name)
 
     if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
@@ -539,10 +547,6 @@ class Viv:
 
         generate_import(args.requirements, args.reqs, self.vivenvs, args.path)
 
-    def _make_row(self, vivenv: ViVenv):
-        name = vivenv.name if len(vivenv.name) <= 9 else f"{vivenv.name[:6]}..."
-        return f" │ {name:<9} ┆ {vivenv.spec}"
-
     def list(self, args):
         """list all vivenvs"""
 
@@ -569,8 +573,6 @@ class Viv:
         """run python/pip in vivenv"""
 
         vivenv = self._match_vivenv(args.vivenv)
-        # if args.vivenv not in self.vivenvs:
-        # print(f"{args.vivenv}" not in self.vivenvs)
 
         pip_path, python_path = (vivenv.path / "bin" / cmd for cmd in ("pip", "python"))
         # todo check for vivenv
