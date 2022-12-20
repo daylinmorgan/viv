@@ -3,7 +3,7 @@
 
   viv -h
     OR
-  __import__("viv").activate("requests","bs4")
+  __import__("viv").activate("requests", "bs4")
 """
 
 import hashlib
@@ -168,10 +168,10 @@ class Ansi:
         for row in rows:
             sizes = self._get_column_size(sizes, row)
 
-        # header row
         table_rows = (
             self._make_row(row)
             for row in (
+                # header row
                 (
                     self.__dict__[header_style] + f"{cell:<{sizes[i]}}" + self.end
                     for i, cell in enumerate(rows[0])
@@ -331,7 +331,7 @@ class ViVenv:
         info = {
             "created": str(datetime.today()),
             "build_id": self.build_id,
-            "spec": str(self.spec),
+            "spec": self.spec,
             "exe": self.exe,
         }
         # save metadata to json file
@@ -339,6 +339,7 @@ class ViVenv:
             with (self.path / "viv-info.json").open("w") as f:
                 json.dump(info, f)
         else:
+            info["spec"] = ";".join(self.spec)
             a.table((("key", "value"), *((k, v) for k, v in info.items())))
 
 
@@ -479,7 +480,7 @@ usage: viv <sub-cmd> [-h]
 from command line:
   `{a.style("viv -h","bold")}`
 within python script:
-  {a.style('__import__("viv").activate("typer","rich-click")','bold')}
+  {a.style('__import__("viv").activate("typer", "rich-click")','bold')}
 
 commands:
   list (l)    list all viv vivenvs
@@ -557,13 +558,7 @@ class Viv:
                         f"{vivenv.name[:6]}..."
                         if len(vivenv.name) > 9
                         else vivenv.name,
-                        ";".join(
-                            vivenv.spec.replace("[", "")
-                            .replace("]", "")
-                            .replace(" ", "")
-                            .replace("'", "")
-                            .split(",")
-                        ),
+                        ";".join(vivenv.spec),
                     )
                     for vivenv in self.vivenvs.values()
                 ),
@@ -710,9 +705,6 @@ class Viv:
 
         args = parser.parse_args()
 
-        # for dev purposes TODO: delete
-        if not args.quiet:
-            echo(f"Parsed Args: {args}", hue="yellow")
         args.func(args)
 
 
