@@ -32,6 +32,8 @@ __version__ = "22.12a2"
 
 @dataclass
 class Config:
+    """viv config manager"""
+
     venvcache: Path = (
         Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".local" / "cache"))
         / "viv"
@@ -112,6 +114,8 @@ BOX: Dict[str, str] = {
 
 @dataclass
 class Ansi:
+    """control ouptut of ansi(VT100) control codes"""
+
     bold: str = "\033[1m"
     dim: str = "\033[2m"
     underline: str = "\033[4m"
@@ -139,6 +143,7 @@ class Ansi:
 
     def tagline(self):
         """generate the viv tagline!"""
+
         return " ".join(
             (
                 self.style(f, "magenta") + self.style(rest, "cyan")
@@ -147,6 +152,12 @@ class Ansi:
         )
 
     def subprocess(self, output):
+        """generate output for subprocess error
+
+        Args:
+            output: text output from subprocess, usually from p.stdout
+        """
+
         new_output = [f"{self.red}->{self.end} {line}" for line in output.splitlines()]
 
         sys.stdout.write("\n".join(new_output) + "\n")
@@ -162,6 +173,12 @@ class Ansi:
         return f"  {BOX['v']} " + f" {BOX['sep']} ".join(row) + f" {BOX['v']}"
 
     def table(self, rows, header_style="cyan") -> None:
+        """generate a table with outline and styled header
+
+        Args:
+            rows: sequence of the rows, first item assumed to be header
+            header_style: color/style for header row
+        """
         # TODO: make this function screen size aware...either with wrapping or cropping
 
         sizes = [0] * len(rows[0])
@@ -191,16 +208,19 @@ a = Ansi()
 
 
 def error(msg, code: int = 0):
+    """output error message and if code provided exit"""
     echo(f"{a.red}error:{a.end} {msg}", hue="red")
     if code:
         sys.exit(code)
 
 
 def warn(msg):
+    """output warning message to stdout"""
     echo(f"{a.yellow}warn:{a.end} {msg}", hue="yellow")
 
 
 def echo(msg: str, hue="magenta", newline=True) -> None:
+    """output general message to stdout"""
     output = f"{a.cyan}Viv{a.end}{a.__dict__[hue]}::{a.end} {msg}"
     if newline:
         output += "\n"
@@ -255,9 +275,17 @@ def run(
         return ""
 
 
-def get_hash(package_spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
+def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
+    """generate a hash of package specifications
+
+    Args:
+        spec: sequence of package specifications
+        track_exe: if true add python executable to hash
+    Returns:
+        sha256 representation of dependencies for vivenv
+    """
     pkg_hash = hashlib.sha256()
-    pkg_hash.update(str(package_spec).encode())
+    pkg_hash.update(str(spec).encode())
 
     # generate unique venvs for unique python exe's
     if track_exe:
@@ -267,7 +295,6 @@ def get_hash(package_spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
 
 
 class ViVenv:
-    # TODO: make method to generate venv from the info file?
     def __init__(
         self,
         spec: List[str],
@@ -283,7 +310,11 @@ class ViVenv:
         self.path = path if path else c.venvcache / self.name
 
     @classmethod
-    def load(cls, name) -> "ViVenv":
+    def load(cls, name: str) -> "ViVenv":
+        """generate a vivenv from a viv-info.json file
+        Args:
+            name: used as lookup in the vivenv cache
+        """
         if not (c.venvcache / name / "viv-info.json").is_file():
             warn(f"possibly corrupted vivenv: {name}")
             return cls(name=name, spec=[""])
@@ -351,8 +382,8 @@ def activate(*packages: str, track_exe: bool = False, name: str = "") -> None:
         track_exe: if true make env python exe specific
         name: use as vivenv name, if not provided build_id is used
     """
-
-    vivenv = ViVenv(validate_spec(packages), track_exe=track_exe, name=name)
+    validate_spec(packages)
+    vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
 
     if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
         "VIV_FORCE"
@@ -364,16 +395,16 @@ def activate(*packages: str, track_exe: bool = False, name: str = "") -> None:
     modify_sys_path(vivenv.path)
 
 
-def validate_spec(spec) -> List[str]:
-    to_install: List[str] = []
+def validate_spec(spec):
+    """ensure spec is at least of sequence of strings
 
-    if set(map(type, spec)) == {str}:
-        to_install.extend(pkg for pkg in spec)
-    else:
+    Args:
+        spec: sequence of package specifications
+    """
+    # ? make this a part of ViVenv?
+    if not set(map(type, spec)) == {str}:
         error("unexepected input in package spec")
         error(f"check your packages definitions: {spec}", code=1)
-
-    return to_install
 
 
 def modify_sys_path(new_path: Path):
@@ -421,7 +452,8 @@ def generate_import(
         vivenv = ViVenv(reqs + reqs_from_file, track_exe=False, path=Path(tmpdir))
 
         vivenv.create()
-        # populate the environment for now use custom cmd since using requirements file
+        # populate the environment for now use
+        # custom cmd since using requirements file
         cmd = [
             vivenv.path / "bin" / "pip",
             "install",
