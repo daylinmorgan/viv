@@ -1,4 +1,4 @@
-VERSION ?= $(shell git describe --tags --always --dirty=-dev)
+VERSION ?= $(shell git describe --tags --always --dirty=-dev | sed 's/^v//g')
 VENV_BIN = ./.venv/bin
 
 lint:
