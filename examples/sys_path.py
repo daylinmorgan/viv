@@ -17,4 +17,4 @@ f = Figlet(font="slant")
 print(f.renderText("Viv isn't venv!"))
 
 print("Sys path:")
-print("\n".join(sys.path))
+print("\n".join(sorted(set(sys.path))))
