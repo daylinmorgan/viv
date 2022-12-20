@@ -1,23 +1,22 @@
-[tool.pdm]
-[tool.pdm.dev-dependencies]
-dev = [
-    "pre-commit>=2.20.0",
-]
+[build-system]
+requires = ["pdm-pep517>=1.0"]
+build-backend = "pdm.pep517.api"
 
 [project]
 name = "viv"
-version = "22.12a1"
 description = "viv isn't venv"
 authors = [{ name = "Daylin Morgan", email = "daylinmorgan@gmail.com" }]
 dependencies = []
 requires-python = ">= 3.7"
 readme = "README.md"
 license = { text = "MIT" }
+dynamic = ["version"]
 
 [project.scripts]
 viv = "viv.viv:main"
 
+[tool.pdm]
+version = { source = "scm" }
 
-[build-system]
-requires = ["pdm-pep517>=1.0"]
-build-backend = "pdm.pep517.api"
+[tool.pdm.dev-dependencies]
+dev = ["pre-commit>=2.20.0"]
