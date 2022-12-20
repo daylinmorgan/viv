@@ -251,8 +251,8 @@ def run(
     elif check_output:
         return p.stdout
 
-    # else:
-    # return ""
+    else:
+        return ""
 
 
 def get_hash(package_spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
@@ -421,7 +421,7 @@ def generate_import(
         if reqs:
             cmd += reqs
 
-            run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
+        run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
 
         # generate a frozen environment
         cmd = [vivenv.path / "bin" / "pip", "freeze"]
