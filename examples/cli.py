@@ -8,7 +8,7 @@ __import__("viv").activate("typer", "rich-click")  # noqa
 
 import typer
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 
 
 @app.command()
