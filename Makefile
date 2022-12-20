@@ -9,7 +9,9 @@ types:
 
 bump-version:
 	@echo "bumping to version => $(VERSION)"
-	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv.py
+	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
+	@git add src/viv/viv.py && git commit -m "chore: bump version"
+	@git tag v$(VERSION)
 
 env:
 	pdm install
