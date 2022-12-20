@@ -262,7 +262,7 @@ def get_hash(package_spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
     # generate unique venvs for unique python exe's
     if track_exe:
         pkg_hash.update(str(Path(sys.executable).resolve()).encode())
-    
+
     return pkg_hash.hexdigest()
 
 
@@ -606,6 +606,12 @@ class Viv:
     def cli(self):
 
         parser = ArgumentParser(description=description, usage=SUPPRESS)
+        parser.add_argument(
+            "-V",
+            "--version",
+            action="version",
+            version=f"{a.bold}viv{a.end}, version {a.cyan}{__version__}{a.end}",
+        )
         subparsers = parser.add_subparsers(
             metavar="<sub-cmd>", title="subcommands", help=SUPPRESS, required=True
         )
@@ -710,6 +716,10 @@ class Viv:
         args.func(args)
 
 
-if __name__ == "__main__":
+def main():
     viv = Viv()
     viv.cli()
+
+
+if __name__ == "__main__":
+    main()

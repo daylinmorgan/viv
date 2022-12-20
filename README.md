@@ -3,7 +3,7 @@
 ## Setup
 
 Start by cloning the repo and symlinking the script for access to the CLI.
-By default it will symlink `./src/viv.py` to `~/bin/viv`.
+By default it will symlink `./src/viv/viv.py` to `~/bin/viv`.
 You can set `PREFIX` to symlink to a different location.
 
 ```sh
