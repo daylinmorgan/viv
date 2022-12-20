@@ -5,7 +5,7 @@ lint:
 	pdm run pre-commit run --all || pdm run pre-commit run --all
 
 types:
-	mypy src/
+	mypy src/viv
 
 bump-version:
 	@echo "bumping to version => $(VERSION)"
