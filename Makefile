@@ -1,4 +1,5 @@
 VERSION ?= $(shell git describe --tags --always --dirty=-dev | sed 's/^v//g')
+PREFIX ?= ~/bin
 VENV_BIN = ./.venv/bin
 
 lint:
@@ -17,7 +18,7 @@ env:
 	$(VENV_BIN)/pre-commit install --install-hooks
 
 install:
-	ln -sf $(shell pwd)/src/viv.py ~/bin/viv
+	ln -sf $(shell pwd)/src/viv.py $(PREFIX)/viv
 
 uninstall:
 	rm ~/bin/viv
