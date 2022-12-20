@@ -320,7 +320,7 @@ class ViVenv:
 
         run(
             cmd,
-            spinmsg=f"installing packages in vivenv: {self.name}",
+            spinmsg=f"installing packages in vivenv",
             clean_up_path=self.path,
             verbose=bool(os.getenv("VIV_VERBOSE")),
         )
@@ -593,10 +593,9 @@ class Viv:
         if not metadata_file.is_file():
             error(f"Unable to find metadata for vivenv: {args.vivenv}", code=1)
 
-        echo(f"more info about {vivenv.name}:\n")
+        echo(f"more info about {vivenv.name}:")
 
         vivenv.dump_info()
-        echo(f"located at: {vivenv.path}")
 
     def cli(self):
 
