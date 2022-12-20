@@ -12,6 +12,10 @@ readme = "README.md"
 license = { text = "MIT" }
 dynamic = ["version"]
 
+[project.urls]
+homepage = "https://github.com/daylinmorgan/viv"
+repository = "https://github.com/daylinmorgan/viv"
+
 [project.scripts]
 viv = "viv.viv:main"
 
