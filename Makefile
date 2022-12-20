@@ -27,4 +27,9 @@ docs: docs/demo.gif
 docs/%.gif: docs/%.tape
 	vhs < $<
 
-.PHONY: env lint install uninstall bump-version types docs
+EXAMPLES = cli.py sys_path.py exe_specific.py frozen_import.py named_env.py scrape.py
+generate-example-vivens:
+	for f in $(EXAMPLES); \
+		do python examples/$$f; done
+
+.PHONY: env lint install uninstall bump-version types docs generate-example-vivens
