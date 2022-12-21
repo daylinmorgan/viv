@@ -19,6 +19,7 @@ You can set `PREFIX` to symlink to a different location.
 
 ```sh
 git clone git@github.com:daylinmorgan/viv.git ~/.viv
+cd ~/.viv
 make install # or PREFIX=~/.local/bin make install
 ```
 
