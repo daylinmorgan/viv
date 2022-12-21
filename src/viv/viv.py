@@ -77,7 +77,8 @@ class Spinner:
                 if cleanup:
                     sys.stdout.write("   ")  # overwrite spinner with blank
                     # sys.stdout.write("\r")  # move to next line
-                    sys.stdout.write("\r\033[K")  # move back then delete the line
+                    # move back then delete the line
+                    sys.stdout.write("\r\033[K")
                 sys.stdout.flush()
 
     def spinner_task(self):
@@ -428,6 +429,7 @@ def get_venvs():
 
 
 SYS_PATH_TEMPLATE = """__import__("sys").path.append("{path_to_viv}")  # noqa"""
+REL_SYS_PATH_TEMPLATE = """__import__("sys").path.append(__import__("os").path.expanduser("{path_to_viv}"))  # noqa"""
 IMPORT_TEMPLATE = """__import__("viv").activate({spec})  # noqa"""
 
 
@@ -471,10 +473,19 @@ def generate_import(
         output = run(cmd, check_output=True)
 
         echo("see below for import statements\n")
-        if include_path:
+        if include_path == "absolute":
             sys.stdout.write(
                 SYS_PATH_TEMPLATE.format(
-                    path_to_viv=Path(__file__).resolve().absolute().parent
+                    path_to_viv=Path(__file__).resolve().absolute().parent.parent
+                )
+                + "\n"
+            )
+        elif include_path == "relative":
+            sys.stdout.write(
+                REL_SYS_PATH_TEMPLATE.format(
+                    path_to_viv=str(
+                        Path(__file__).resolve().absolute().parent.parent
+                    ).replace(str(Path.home()), "~")
                 )
                 + "\n"
             )
@@ -577,7 +588,17 @@ class Viv:
             print("must specify a requirement")
             sys.exit(1)
 
-        generate_import(args.requirements, args.reqs, self.vivenvs, args.path)
+        # TODO: use argparse to refactor this out
+        if args.path and args.rel_path:
+            error("please specify only one of: --path, --rel-path", code=1)
+        elif args.path:
+            include_path = "absolute"
+        elif args.rel_path:
+            include_path = "relative"
+        else:
+            include_path = ""
+
+        generate_import(args.requirements, args.reqs, self.vivenvs, include_path)
 
     def list(self, args):
         """list all vivenvs"""
@@ -708,6 +729,12 @@ class Viv:
             "-p",
             "--path",
             help="generate line to add viv to sys.path",
+            action="store_true",
+        )
+        p_freeze.add_argument(
+            "-rp",
+            "--rel-path",
+            help="generate line to add viv to sys.path relative to user home (~/)",
             action="store_true",
         )
         p_freeze.add_argument(
