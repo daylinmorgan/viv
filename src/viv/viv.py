@@ -551,6 +551,7 @@ class Viv:
         self.vivenvs = get_venvs()
 
     def _match_vivenv(self, name_id: str) -> ViVenv:
+        # TODO: improve matching algorithm to favor names over id's
         matches = []
         for k, v in self.vivenvs.items():
             if name_id == k or v.name == name_id:
@@ -562,7 +563,7 @@ class Viv:
         if not matches:
             error(f"no matches found for {name_id}", code=1)
         elif len(matches) > 1:
-            echo(f"matches {','.join(matches)}", hue="red")
+            echo(f"matches {','.join((match.name for match in matches))}", hue="red")
             error("too many matches maybe try a longer name?", code=1)
         else:
             return matches[0]
