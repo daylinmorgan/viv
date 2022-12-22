@@ -276,7 +276,7 @@ def run(
         return ""
 
 
-def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool) -> str:
+def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
     """generate a hash of package specifications
 
     Args:
@@ -438,8 +438,28 @@ def spec_to_import(spec: List[str]) -> None:
     sys.stdout.write(IMPORT_TEMPLATE.format(spec=spec_str) + "\n")
 
 
+def freeze_venv(spec: List[str], path: Path | None = None):
+    vivenv = ViVenv(spec, track_exe=False, path=path)
+
+    vivenv.create()
+    # populate the environment for now use
+    # custom cmd since using requirements file
+    cmd = [
+        vivenv.path / "bin" / "pip",
+        "install",
+        "--force-reinstall",
+    ] + spec
+
+    run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
+
+    # generate a frozen environment
+    cmd = [vivenv.path / "bin" / "pip", "freeze"]
+    resolved_spec = run(cmd, check_output=True)
+    return vivenv, resolved_spec
+
+
 def generate_import(
-    requirements: Path, reqs: List[str], vivenvs, include_path: bool
+    requirements: Path, reqs: List[str], vivenvs, include_path: bool, keep: bool
 ) -> None:
     # TODO: make compatible with Venv class for now just use the name /tmp/
     reqs_from_file = []
@@ -449,48 +469,48 @@ def generate_import(
             reqs_from_file = f.readlines()
 
     # refactor to make the below steps context dependent with tmpdir path
-    with tempfile.TemporaryDirectory() as tmpdir:  #
-        echo(f"using temporary vivenv: {tmpdir}")
-        vivenv = ViVenv(reqs + reqs_from_file, track_exe=False, path=Path(tmpdir))
+    if keep:
+        # TODO: remove directory if any errors occur?
+        echo("generating new vivenv")
+        vivenv, resolved_spec = freeze_venv(reqs + reqs_from_file)
 
-        vivenv.create()
-        # populate the environment for now use
-        # custom cmd since using requirements file
-        cmd = [
-            vivenv.path / "bin" / "pip",
-            "install",
-            "--force-reinstall",
-        ]
-        if requirements:
-            cmd += ["-r", requirements]
-        if reqs:
-            cmd += reqs
+        # update build_id and move vivenv
+        vivenv.spec = resolved_spec.splitlines()
+        vivenv.build_id = get_hash(resolved_spec.splitlines())
+        echo(f"updated hash -> {vivenv.build_id}")
 
-        run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
-
-        # generate a frozen environment
-        cmd = [vivenv.path / "bin" / "pip", "freeze"]
-        output = run(cmd, check_output=True)
-
-        echo("see below for import statements\n")
-        if include_path == "absolute":
-            sys.stdout.write(
-                SYS_PATH_TEMPLATE.format(
-                    path_to_viv=Path(__file__).resolve().absolute().parent.parent
-                )
-                + "\n"
-            )
-        elif include_path == "relative":
-            sys.stdout.write(
-                REL_SYS_PATH_TEMPLATE.format(
-                    path_to_viv=str(
-                        Path(__file__).resolve().absolute().parent.parent
-                    ).replace(str(Path.home()), "~")
-                )
-                + "\n"
+        if not (c.venvcache / vivenv.build_id).exists():
+            vivenv.path = vivenv.path.rename(c.venvcache / vivenv.build_id)
+            vivenv.dump_info(write=True)
+        else:
+            echo("this vivenv already exists cleaning up temporary vivenv")
+            shutil.rmtree(vivenv.path)
+    else:
+        with tempfile.TemporaryDirectory() as tmpdir:  #
+            echo("generating temporary vivenv ")
+            vivenv, resolved_spec = freeze_venv(
+                reqs + reqs_from_file, path=Path(tmpdir)
             )
 
-        spec_to_import(output.splitlines())
+    echo("see below for import statements\n")
+    if include_path == "absolute":
+        sys.stdout.write(
+            SYS_PATH_TEMPLATE.format(
+                path_to_viv=Path(__file__).resolve().absolute().parent.parent
+            )
+            + "\n"
+        )
+    elif include_path == "relative":
+        sys.stdout.write(
+            REL_SYS_PATH_TEMPLATE.format(
+                path_to_viv=str(
+                    Path(__file__).resolve().absolute().parent.parent
+                ).replace(str(Path.home()), "~")
+            )
+            + "\n"
+        )
+
+    spec_to_import(resolved_spec.splitlines())
 
 
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
@@ -589,17 +609,9 @@ class Viv:
             print("must specify a requirement")
             sys.exit(1)
 
-        # TODO: use argparse to refactor this out
-        if args.path and args.rel_path:
-            error("please specify only one of: --path, --rel-path", code=1)
-        elif args.path:
-            include_path = "absolute"
-        elif args.rel_path:
-            include_path = "relative"
-        else:
-            include_path = ""
-
-        generate_import(args.requirements, args.reqs, self.vivenvs, include_path)
+        generate_import(
+            args.requirements, args.reqs, self.vivenvs, args.path, args.keep
+        )
 
     def list(self, args):
         """list all vivenvs"""
@@ -730,19 +742,13 @@ class Viv:
             "-p",
             "--path",
             help="generate line to add viv to sys.path",
-            action="store_true",
-        )
-        p_freeze.add_argument(
-            "-rp",
-            "--rel-path",
-            help="generate line to add viv to sys.path relative to user home (~/)",
-            action="store_true",
+            choices=["absolute", "relative"],
         )
         p_freeze.add_argument(
             "-r",
             "--requirements",
             help="path to requirements.txt file",
-            metavar="<path-to-file>",
+            metavar="<path>",
         )
         p_freeze.add_argument(
             "-k",
