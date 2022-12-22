@@ -128,7 +128,7 @@ class Ansi:
     end: str = "\033[0m"
 
     def __post_init__(self):
-        if os.getenv("NO_COLOR"):
+        if os.getenv("NO_COLOR") or not sys.stdout.isatty():
             for attr in self.__dict__:
                 setattr(self, attr, "")
 
