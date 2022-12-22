@@ -23,7 +23,4 @@ viv = "viv.viv:main"
 version = { source = "scm" }
 
 [tool.pdm.dev-dependencies]
-dev = [
-    "pre-commit>=2.20.0",
-    "mypy>=0.991",
-]
+dev = ["pre-commit>=2.20.0", "mypy>=0.991"]
