@@ -7,15 +7,16 @@ it will generate a new vivenv.
 It may be important to require a exe specificty if you are frequently running
 different version of pythons and rely on c extension modules as in numpy.
 """
-
-__import__("viv").activate("numpy", "termplotlib", track_exe=True)
+__import__("viv").activate("numpy", "plotext", track_exe=True)  # noqa
 
 import numpy as np
-import termplotlib as tpl
+import plotext as plt
 
-x = np.linspace(0, 2 * np.pi, 10)
+x = np.linspace(0, 2 * np.pi, 100)
 y = np.sin(x)
 
-fig = tpl.figure()
-fig.plot(x, y, label="data", width=50, height=15)
-fig.show()
+plt.scatter(x, y)
+plt.title("Scatter Plot")  # to apply a title
+plt.plot_size(plt.tw() / 4, plt.th() / 4)
+plt.theme("pro")
+plt.show()  # to finally plot
