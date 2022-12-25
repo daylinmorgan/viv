@@ -10,6 +10,7 @@ import hashlib
 import itertools
 import json
 import os
+import re
 import shlex
 import shutil
 import site
@@ -127,20 +128,43 @@ class Ansi:
     cyan: str = "\033[1;36m"
     end: str = "\033[0m"
 
+    # for argparse help
+    header: str = cyan
+    option: str = yellow
+    metavar: str = "\033[2;33m"  # dim yellow
+
     def __post_init__(self):
         if os.getenv("NO_COLOR") or not sys.stdout.isatty():
             for attr in self.__dict__:
                 setattr(self, attr, "")
 
-    def style(self, txt: str, hue: str = "cyan") -> str:
-        """style text with given hue
+        self._ansi_escape = re.compile(
+            r"""
+            \x1B  # ESC
+            (?:   # 7-bit C1 Fe (except CSI)
+                [@-Z\\-_]
+            |     # or [ for CSI, followed by a control sequence
+                \[
+                [0-?]*  # Parameter bytes
+                [ -/]*  # Intermediate bytes
+                [@-~]   # Final byte
+            )
+            """,
+            re.VERBOSE,
+        )
+
+    def escape(self, txt: str) -> str:
+        return self._ansi_escape.sub("", txt)
+
+    def style(self, txt: str, style: str = "cyan") -> str:
+        """style text with given style
         Args:
             txt: text to stylize
-            hue: color/style to apply to text
+            style: color/style to apply to text
         Returns:
             ansi escape code stylized text
         """
-        return f"{getattr(self,hue)}{txt}{getattr(self,'end')}"
+        return f"{getattr(self,style)}{txt}{getattr(self,'end')}"
 
     def tagline(self):
         """generate the viv tagline!"""
@@ -210,19 +234,19 @@ a = Ansi()
 
 def error(msg, code: int = 0):
     """output error message and if code provided exit"""
-    echo(f"{a.red}error:{a.end} {msg}", hue="red")
+    echo(f"{a.red}error:{a.end} {msg}", style="red")
     if code:
         sys.exit(code)
 
 
 def warn(msg):
     """output warning message to stdout"""
-    echo(f"{a.yellow}warn:{a.end} {msg}", hue="yellow")
+    echo(f"{a.yellow}warn:{a.end} {msg}", style="yellow")
 
 
-def echo(msg: str, hue="magenta", newline=True) -> None:
+def echo(msg: str, style="magenta", newline=True) -> None:
     """output general message to stdout"""
-    output = f"{a.cyan}Viv{a.end}{a.__dict__[hue]}::{a.end} {msg}"
+    output = f"{a.cyan}Viv{a.end}{a.__dict__[style]}::{a.end} {msg}"
     if newline:
         output += "\n"
     sys.stdout.write(output)
@@ -261,7 +285,7 @@ def run(
 
     if p.returncode != 0 and not ignore_error:
         error("subprocess failed")
-        echo("see below for command output", hue="red")
+        echo("see below for command output", style="red")
         a.subprocess(p.stdout)
 
         if clean_up_path and clean_up_path.is_dir():
@@ -332,7 +356,6 @@ class ViVenv:
 
     def create(self) -> None:
 
-        # TODO: make sure it doesn't exist already?
         echo(f"new unique vivenv -> {self.name}")
         with Spinner("creating vivenv"):
             builder = venv.EnvBuilder(with_pip=True, clear=True)
@@ -358,6 +381,7 @@ class ViVenv:
         )
 
     def dump_info(self, write=False):
+
         # TODO: include associated files in 'info'
         # means it needs to be loaded first
         info = {
@@ -516,17 +540,122 @@ def generate_import(
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
     """formatter to remove extra metavar on short opts"""
 
-    def __init__(self, *args, **kwargs):
-        super(CustomHelpFormatter, self).__init__(
-            *args, max_help_position=40, width=90, **kwargs
-        )
+    def _get_invocation_length(self, invocation):
+        return len(a.escape(invocation))
 
     def _format_action_invocation(self, action):
-        if not action.option_strings or action.nargs == 0:
-            return super()._format_action_invocation(action)
-        default = self._get_default_metavar_for_optional(action)
-        args_string = self._format_args(action, default)
-        return ", ".join(action.option_strings) + " " + args_string
+        if not action.option_strings:
+            (metavar,) = self._metavar_formatter(action, action.dest)(1)
+            return a.style(metavar, style="option")
+        else:
+            parts = []
+            # if the Optional doesn't take a value, format is:
+            #    -s, --long
+            if action.nargs == 0:
+                parts.extend(
+                    [
+                        a.style(option, style="option")
+                        for option in action.option_strings
+                    ]
+                )
+
+            # if the Optional takes a value, format is:
+            #    -s ARGS, --long ARGS
+            # change to
+            #    -s, --long ARGS
+            else:
+                default = action.dest.upper()
+                args_string = self._format_args(action, default)
+                parts.extend(
+                    [
+                        a.style(option, style="option")
+                        for option in action.option_strings
+                    ]
+                )
+                # add metavar to last string
+                parts[-1] += a.style(f" {args_string}", style="metavar")
+            return (", ").join(parts)
+
+    def _format_usage(self, *args, **kwargs):
+
+        formatted_usage = super()._format_usage(*args, **kwargs)
+        # patch usage with color formatting
+        formatted_usage = (
+            formatted_usage
+            if f"{a.header}usage{a.end}:" in formatted_usage
+            else formatted_usage.replace("usage:", f"{a.header}usage{a.end}:")
+        )
+        return formatted_usage
+
+    def _format_action(self, action):
+        # determine the required width and the entry label
+        help_position = min(self._action_max_length + 2, self._max_help_position)
+        help_width = max(self._width - help_position, 11)
+        action_width = help_position - self._current_indent - 2
+        action_header = self._format_action_invocation(action)
+        action_header_len = len(a.escape(action_header))
+
+        # no help; start on same line and add a final newline
+        if not action.help:
+            tup = self._current_indent, "", action_header
+            action_header = "%*s%s\n" % tup
+        # short action name; start on the same line and pad two spaces
+        elif action_header_len <= action_width:
+            tup = self._current_indent, "", action_width, action_header
+            action_header = (
+                f"{' '*self._current_indent}{action_header}"
+                f"{' '*(action_width+2 - action_header_len)}"
+            )
+            indent_first = 0
+
+        # long action name; start on the next line
+        else:
+            tup = self._current_indent, "", action_header
+            action_header = "%*s%s\n" % tup
+            indent_first = help_position
+
+        # collect the pieces of the action help
+        parts = [action_header]
+
+        # if there was help for the action, add lines of help text
+        if action.help and action.help.strip():
+            help_text = self._expand_help(action)
+            if help_text:
+                help_lines = self._split_lines(help_text, help_width)
+                parts.append("%*s%s\n" % (indent_first, "", help_lines[0]))
+                for line in help_lines[1:]:
+                    parts.append("%*s%s\n" % (help_position, "", line))
+
+        # or add a newline if the description doesn't end with one
+        elif not action_header.endswith("\n"):
+            parts.append("\n")
+
+        # if there are any sub-actions, add their help as well
+        for subaction in self._iter_indented_subactions(action):
+            parts.append(self._format_action(subaction))
+
+        # return a single string
+        return self._join_parts(parts)
+
+    def start_section(self, heading: str) -> None:
+        return super().start_section(a.style(heading, style="header"))
+
+    def add_argument(self, action):
+        if action.help is not SUPPRESS:
+
+            # find all invocations
+            get_invocation = self._format_action_invocation
+            invocations = [get_invocation(action)]
+            for subaction in self._iter_indented_subactions(action):
+                invocations.append(get_invocation(subaction))
+
+            # update the maximum item length accounting for ansi codes
+            invocation_length = max(map(self._get_invocation_length, invocations))
+            action_length = invocation_length + self._current_indent
+            self._action_max_length = max(self._action_max_length, action_length)
+
+            # add the item to the list
+            self._add_item(self._format_action, [action])
 
 
 class ArgumentParser(StdArgParser):
@@ -537,13 +666,12 @@ class ArgumentParser(StdArgParser):
 
     def error(self, message):
         error(message)
-        echo("see below for help", hue="red")
+        echo("see below for help\n", style="red")
         self.print_help()
         sys.exit(2)
 
 
 description = f"""
-usage: viv <sub-cmd> [-h]
 
 {a.tagline()}
 
@@ -552,18 +680,7 @@ from command line:
   `{a.style("viv -h","bold")}`
 within python script:
   {a.style('__import__("viv").activate("typer", "rich-click")','bold')}
-
-commands:
-  list (l)    list all viv vivenvs
-  exe         run python/pip in vivenv
-  remove (rm) remove a vivenv
-  freeze (f)  create import statement from package spec
-  info (i)    get metadata about a vivenv
 """
-
-
-def cmd_desc(subcmd):
-    return f"usage: viv {subcmd} [-h]"
 
 
 class Viv:
@@ -583,7 +700,7 @@ class Viv:
         if not matches:
             error(f"no matches found for {name_id}", code=1)
         elif len(matches) > 1:
-            echo(f"matches {','.join((match.name for match in matches))}", hue="red")
+            echo(f"matches {','.join((match.name for match in matches))}", style="red")
             error("too many matches maybe try a longer name?", code=1)
         else:
             return matches[0]
@@ -665,44 +782,46 @@ class Viv:
 
         vivenv.dump_info()
 
-    def cli(self):
+    def _get_subcmd_parser(self, subparsers, name: str, **kwargs):
+        cmd = getattr(self, name)
+        parser = subparsers.add_parser(
+            name, help=cmd.__doc__, description=cmd.__doc__, **kwargs
+        )
+        parser.set_defaults(func=cmd)
 
-        parser = ArgumentParser(description=description, usage=SUPPRESS)
+        return parser
+
+    def cli(self):
+        """cli entrypoint"""
+
+        parser = ArgumentParser(description=description)
         parser.add_argument(
             "-V",
             "--version",
             action="version",
             version=f"{a.bold}viv{a.end}, version {a.cyan}{__version__}{a.end}",
         )
-        subparsers = parser.add_subparsers(
-            metavar="<sub-cmd>", title="subcommands", help=SUPPRESS, required=True
-        )
 
+        subparsers = parser.add_subparsers(
+            metavar="<sub-cmd>", title="subcommands", required=True
+        )
         p_vivenv_arg = ArgumentParser(add_help=False)
         p_vivenv_arg.add_argument("vivenv", help="name/hash of vivenv")
+        p_list = self._get_subcmd_parser(subparsers, "list", aliases=["l"])
 
-        p_list = subparsers.add_parser(
-            "list",
-            help=self.list.__doc__,
-            aliases=["l"],
-            description=cmd_desc("list"),
-            usage=SUPPRESS,
-        )
         p_list.add_argument(
-            "-q", "--quiet", help="suppress non-essential output", action="store_true"
+            "-q",
+            "--quiet",
+            help="suppress non-essential output",
+            action="store_true",
+            default=False,
         )
-        p_list.set_defaults(func=self.list)
 
-        p_exe = subparsers.add_parser(
-            "exe",
-            help=self.exe.__doc__,
-            usage=SUPPRESS,
-            description=cmd_desc("exe"),
-        )
+        p_exe = self._get_subcmd_parser(subparsers, "exe", aliases=["e"])
         p_exe_sub = p_exe.add_subparsers(
             title="subcommand", metavar="<sub-cmd>", required=True
         )
-        #
+
         p_exe_shared = ArgumentParser(add_help=False)
         p_exe_shared.add_argument(
             "cmd",
@@ -721,23 +840,14 @@ class Viv:
         p_exe_python.set_defaults(func=self.exe, exe="python")
         p_exe_pip.set_defaults(func=self.exe, exe="pip")
 
-        p_remove = subparsers.add_parser(
+        p_remove = self._get_subcmd_parser(
+            subparsers,
             "remove",
-            help=self.remove.__doc__,
             aliases=["rm"],
-            usage=SUPPRESS,
-            description=cmd_desc("remove"),
         )
-        p_remove.add_argument("vivenv", help="name/hash of vivenv", nargs="*")
-        p_remove.set_defaults(func=self.remove)
 
-        p_freeze = subparsers.add_parser(
-            "freeze",
-            help=self.freeze.__doc__,
-            aliases=["f"],
-            usage=SUPPRESS,
-            description=cmd_desc("freeze"),
-        )
+        p_remove.add_argument("vivenv", help="name/hash of vivenv", nargs="*")
+        p_freeze = self._get_subcmd_parser(subparsers, "freeze", aliases=["f"])
         p_freeze.add_argument(
             "-p",
             "--path",
@@ -757,18 +867,13 @@ class Viv:
             action="store_true",
         )
         p_freeze.add_argument("reqs", help="requirements specifiers", nargs="*")
-        p_freeze.set_defaults(func=self.freeze)
 
-        p_info = subparsers.add_parser(
+        self._get_subcmd_parser(
+            subparsers,
             "info",
-            help=self.info.__doc__,
-            parents=[p_vivenv_arg],
             aliases=["i"],
-            description=cmd_desc("info"),
-            usage=SUPPRESS,
+            parents=[p_vivenv_arg],
         )
-        p_info.set_defaults(func=self.info)
-        parser.set_defaults(quiet=False)
 
         args = parser.parse_args()
 
