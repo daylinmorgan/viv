@@ -25,7 +25,9 @@ from argparse import ArgumentParser as StdArgParser
 from argparse import HelpFormatter, RawDescriptionHelpFormatter
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import zip_longest
 from pathlib import Path
+from textwrap import wrap
 from typing import Dict, List, Tuple
 
 __version__ = "22.12a3"
@@ -197,6 +199,16 @@ class Ansi:
 
         return f"  {BOX['v']} " + f" {BOX['sep']} ".join(row) + f" {BOX['v']}"
 
+    def _sanitize_row(self, sizes: List[int], row: Tuple[str]) -> Tuple[Tuple[str]]:
+        if len(row[1]) > sizes[1]:
+            return zip_longest(
+                (row[0],),
+                wrap(row[1], break_on_hyphens=False, width=sizes[1]),
+                fillvalue="",
+            )
+        else:
+            return (row,)
+
     def table(self, rows, header_style="cyan") -> None:
         """generate a table with outline and styled header
 
@@ -204,11 +216,19 @@ class Ansi:
             rows: sequence of the rows, first item assumed to be header
             header_style: color/style for header row
         """
-        # TODO: make this function screen size aware...either with wrapping or cropping
 
         sizes = [0] * len(rows[0])
         for row in rows:
             sizes = self._get_column_size(sizes, row)
+
+        col1_limit = shutil.get_terminal_size().columns - 20
+        if col1_limit < 20:
+            error("increase screen size to view table", code=1)
+
+        if sizes[1] > col1_limit:
+            sizes[1] = col1_limit
+
+        # this is maybe taking comprehensions too far....
 
         table_rows = (
             self._make_row(row)
@@ -220,10 +240,15 @@ class Ansi:
                 ),
                 *(
                     (f"{cell:<{sizes[i]}}" for i, cell in enumerate(row))
-                    for row in rows[1:]
+                    for row in (
+                        newrow
+                        for row in rows[1:]
+                        for newrow in self._sanitize_row(sizes, row)
+                    )
                 ),
             )
         )
+
         sys.stdout.write(f"  {BOX['tl']}{BOX['h']*(sum(sizes)+5)}{BOX['tr']}\n")
         sys.stdout.write("\n".join(table_rows) + "\n")
         sys.stdout.write(f"  {BOX['bl']}{BOX['h']*(sum(sizes)+5)}{BOX['br']}\n")
@@ -395,7 +420,7 @@ class ViVenv:
             with (self.path / "viv-info.json").open("w") as f:
                 json.dump(info, f)
         else:
-            info["spec"] = ";".join(self.spec)
+            info["spec"] = ", ".join(self.spec)
             a.table((("key", "value"), *((k, v) for k, v in info.items())))
 
 
@@ -540,7 +565,6 @@ def generate_import(
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
     """formatter to remove extra metavar on short opts"""
 
-
     def _get_invocation_length(self, invocation):
         return len(a.escape(invocation))
 
@@ -663,7 +687,7 @@ class ArgumentParser(StdArgParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.formatter_class = formatter_class = lambda prog: CustomHelpFormatter(
+        self.formatter_class = lambda prog: CustomHelpFormatter(
             prog, max_help_position=35
         )
 
@@ -748,7 +772,7 @@ class Viv:
                         f"{vivenv.name[:6]}..."
                         if len(vivenv.name) > 9
                         else vivenv.name,
-                        ";".join(vivenv.spec),
+                        ", ".join(vivenv.spec),
                     )
                     for vivenv in self.vivenvs.values()
                 ),
