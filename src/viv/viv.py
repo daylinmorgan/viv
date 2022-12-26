@@ -131,7 +131,7 @@ class Ansi:
     # for argparse help
     header: str = cyan
     option: str = yellow
-    metavar: str = "\033[2;33m"  # dim yellow
+    metavar: str = "\033[33m"  # normal yellow
 
     def __post_init__(self):
         if os.getenv("NO_COLOR") or not sys.stdout.isatty():
@@ -540,6 +540,7 @@ def generate_import(
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
     """formatter to remove extra metavar on short opts"""
 
+
     def _get_invocation_length(self, invocation):
         return len(a.escape(invocation))
 
@@ -662,7 +663,9 @@ class ArgumentParser(StdArgParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.formatter_class = CustomHelpFormatter
+        self.formatter_class = formatter_class = lambda prog: CustomHelpFormatter(
+            prog, max_help_position=35
+        )
 
     def error(self, message):
         error(message)
