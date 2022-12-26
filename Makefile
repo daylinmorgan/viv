@@ -22,9 +22,10 @@ install:
 uninstall:
 	rm ~/bin/viv
 
-docs: docs/demo.gif
+docs: docs/demo.gif docs/freeze.gif
 
 docs/%.gif: docs/%.tape
+	viv rm $$(viv l -q)
 	vhs < $<
 
 EXAMPLES = cli.py sys_path.py exe_specific.py frozen_import.py named_env.py scrape.py
