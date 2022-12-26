@@ -782,10 +782,11 @@ class Viv:
 
         vivenv.dump_info()
 
-    def _get_subcmd_parser(self, subparsers, name: str, **kwargs):
+    def _get_subcmd_parser(self, subparsers, name: str, **kwargs) -> ArgumentParser:
+        aliases = kwargs.pop("aliases", [name[0]])
         cmd = getattr(self, name)
         parser = subparsers.add_parser(
-            name, help=cmd.__doc__, description=cmd.__doc__, **kwargs
+            name, help=cmd.__doc__, description=cmd.__doc__, aliases=aliases, **kwargs
         )
         parser.set_defaults(func=cmd)
 
@@ -807,7 +808,10 @@ class Viv:
         )
         p_vivenv_arg = ArgumentParser(add_help=False)
         p_vivenv_arg.add_argument("vivenv", help="name/hash of vivenv")
-        p_list = self._get_subcmd_parser(subparsers, "list", aliases=["l"])
+        p_list = self._get_subcmd_parser(
+            subparsers,
+            "list",
+        )
 
         p_list.add_argument(
             "-q",
@@ -817,7 +821,10 @@ class Viv:
             default=False,
         )
 
-        p_exe = self._get_subcmd_parser(subparsers, "exe", aliases=["e"])
+        p_exe = self._get_subcmd_parser(
+            subparsers,
+            "exe",
+        )
         p_exe_sub = p_exe.add_subparsers(
             title="subcommand", metavar="<sub-cmd>", required=True
         )
@@ -847,7 +854,10 @@ class Viv:
         )
 
         p_remove.add_argument("vivenv", help="name/hash of vivenv", nargs="*")
-        p_freeze = self._get_subcmd_parser(subparsers, "freeze", aliases=["f"])
+        p_freeze = self._get_subcmd_parser(
+            subparsers,
+            "freeze",
+        )
         p_freeze.add_argument(
             "-p",
             "--path",
@@ -871,7 +881,6 @@ class Viv:
         self._get_subcmd_parser(
             subparsers,
             "info",
-            aliases=["i"],
             parents=[p_vivenv_arg],
         )
 
