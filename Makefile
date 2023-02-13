@@ -31,5 +31,4 @@ generate-example-vivens: ##
 	for f in $(EXAMPLES); \
 		do python examples/$$f; done
 
--include .task.cfg.mk .task.mk
-$(if $(filter help,$(MAKECMDGOALS)),$(if $(wildcard .task.mk),,.task.mk: ; curl -fsSL https://raw.githubusercontent.com/daylinmorgan/task.mk/v23.1.1/task.mk -o .task.mk))
+-include .task.cfg.mk
