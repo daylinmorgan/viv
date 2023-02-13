@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from itertools import zip_longest
 from pathlib import Path
-from textwrap import wrap
+from textwrap import dedent, wrap
 from typing import Dict, List, Tuple
 
 __version__ = "22.12a3"
@@ -733,7 +733,12 @@ class Viv:
             return matches[0]
 
     def remove(self, args):
-        """remove a vivenv"""
+        """\
+        remove a vivenv
+
+        To remove all viv venvs:
+        `viv rm $(viv l -q)`
+        """
 
         for name in args.vivenv:
             vivenv = self._match_vivenv(name)
@@ -813,7 +818,11 @@ class Viv:
         aliases = kwargs.pop("aliases", [name[0]])
         cmd = getattr(self, name)
         parser = subparsers.add_parser(
-            name, help=cmd.__doc__, description=cmd.__doc__, aliases=aliases, **kwargs
+            name,
+            help=cmd.__doc__.splitlines()[0],
+            description=dedent(cmd.__doc__),
+            aliases=aliases,
+            **kwargs,
         )
         parser.set_defaults(func=cmd)
 
