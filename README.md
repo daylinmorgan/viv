@@ -37,18 +37,10 @@ __import__("viv").activate("click")
 
 ## Usage
 
-To temove all viv venvs:
+To remove all viv venvs:
 ```sh
 viv remove $(viv list -q)
 ```
-
-
-## TODO
-
-- [ ] add doc strings to `src/viv/viv.py`
-- [ ] use config file (probably ini or json / could also allow toml for python>=3.11)
-- [ ] enable a garbage collection based on time or file existence (configurable)
-- [ ] unit tests
 
 ## Alternatives
 
