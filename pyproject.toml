@@ -7,7 +7,7 @@ name = "viv"
 description = "viv isn't venv"
 authors = [{ name = "Daylin Morgan", email = "daylinmorgan@gmail.com" }]
 dependencies = []
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 readme = "README.md"
 license = { text = "MIT" }
 dynamic = ["version"]
@@ -23,4 +23,7 @@ viv = "viv.viv:main"
 version = { source = "scm" }
 
 [tool.pdm.dev-dependencies]
-dev = ["pre-commit>=2.20.0", "mypy>=0.991"]
+dev = [
+  "pre-commit>=3",
+  "mypy>=0.991"
+]
