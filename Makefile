@@ -1,7 +1,9 @@
 VERSION ?= $(shell git describe --tags --always --dirty=-dev | sed 's/^v//g')
 PREFIX ?= ~/bin
+
 lint: ## run pre-commit hooks
 	pdm run pre-commit run --all || pdm run pre-commit run --all
+
 types: ## run mypy
 	mypy src/viv
 
@@ -11,7 +13,7 @@ bump-version: ## update version and tag commit
 	@git add src/viv/viv.py && git commit -m "chore: bump version"
 	@git tag v$(VERSION)
 
-env: ## generate environment
+venv: ## generate environment
 	pdm install
 
 install: ## symlink to $PREFIX
