@@ -348,14 +348,14 @@ class ViVenv:
         self,
         spec: List[str],
         track_exe: bool = False,
-        build_id: str | None = None,
+        id: str | None = None,
         name: str = "",
         path: Path | None = None,
     ) -> None:
         self.spec = spec
         self.exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
-        self.build_id = build_id if build_id else get_hash(spec, track_exe)
-        self.name = name if name else self.build_id
+        self.id = id if id else get_hash(spec, track_exe)
+        self.name = name if name else self.id
         self.path = path if path else c.venvcache / self.name
 
     @classmethod
@@ -371,9 +371,7 @@ class ViVenv:
             with (c.venvcache / name / "viv-info.json").open("r") as f:
                 venvconfig = json.load(f)
 
-        vivenv = cls(
-            name=name, spec=venvconfig["spec"], build_id=venvconfig["build_id"]
-        )
+        vivenv = cls(name=name, spec=venvconfig["spec"], id=venvconfig["id"])
         vivenv.exe = venvconfig["exe"]
 
         return vivenv
@@ -407,7 +405,7 @@ class ViVenv:
         # means it needs to be loaded first
         info = {
             "created": str(datetime.today()),
-            "build_id": self.build_id,
+            "id": self.id,
             "spec": self.spec,
             "exe": self.exe,
         }
@@ -426,7 +424,7 @@ def activate(*packages: str, track_exe: bool = False, name: str = "") -> None:
     Args:
         packages: package specifications with optional version specifiers
         track_exe: if true make env python exe specific
-        name: use as vivenv name, if not provided build_id is used
+        name: use as vivenv name, if not provided id is used
     """
     validate_spec(packages)
     vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
@@ -518,13 +516,13 @@ def generate_import(
         echo("generating new vivenv")
         vivenv, resolved_spec = freeze_venv(reqs + reqs_from_file)
 
-        # update build_id and move vivenv
+        # update id and move vivenv
         vivenv.spec = resolved_spec.splitlines()
-        vivenv.build_id = get_hash(resolved_spec.splitlines())
-        echo(f"updated hash -> {vivenv.build_id}")
+        vivenv.id = get_hash(resolved_spec.splitlines())
+        echo(f"updated hash -> {vivenv.id}")
 
-        if not (c.venvcache / vivenv.build_id).exists():
-            vivenv.path = vivenv.path.rename(c.venvcache / vivenv.build_id)
+        if not (c.venvcache / vivenv.id).exists():
+            vivenv.path = vivenv.path.rename(c.venvcache / vivenv.id)
             vivenv.dump_info(write=True)
         else:
             echo("this vivenv already exists cleaning up temporary vivenv")
@@ -713,7 +711,7 @@ class Viv:
         for k, v in self.vivenvs.items():
             if name_id == k or v.name == name_id:
                 matches.append(v)
-            elif k.startswith(name_id) or v.build_id.startswith(name_id):
+            elif k.startswith(name_id) or v.id.startswith(name_id):
                 matches.append(v)
             elif v.name.startswith(name_id):
                 matches.append(v)
