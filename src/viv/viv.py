@@ -196,7 +196,6 @@ class Ansi:
         return sizes
 
     def _make_row(self, row) -> str:
-
         return f"  {BOX['v']} " + f" {BOX['sep']} ".join(row) + f" {BOX['v']}"
 
     def _sanitize_row(self, sizes: List[int], row: Tuple[str]) -> Tuple[Tuple[str]]:
@@ -380,7 +379,6 @@ class ViVenv:
         return vivenv
 
     def create(self) -> None:
-
         echo(f"new unique vivenv -> {self.name}")
         with Spinner("creating vivenv"):
             builder = venv.EnvBuilder(with_pip=True, clear=True)
@@ -391,7 +389,6 @@ class ViVenv:
                 f.write("[global]\ndisable-pip-version-check = true")
 
     def install_pkgs(self):
-
         cmd: List[str | Path] = [
             self.path / "bin" / "pip",
             "install",
@@ -406,7 +403,6 @@ class ViVenv:
         )
 
     def dump_info(self, write=False):
-
         # TODO: include associated files in 'info'
         # means it needs to be loaded first
         info = {
@@ -458,7 +454,6 @@ def validate_spec(spec):
 
 
 def modify_sys_path(new_path: Path):
-
     # remove user-site
     for i, path in enumerate(sys.path):
         if path == site.USER_SITE:
@@ -602,7 +597,6 @@ class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
             return (", ").join(parts)
 
     def _format_usage(self, *args, **kwargs):
-
         formatted_usage = super()._format_usage(*args, **kwargs)
         # patch usage with color formatting
         formatted_usage = (
@@ -667,7 +661,6 @@ class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
 
     def add_argument(self, action):
         if action.help is not SUPPRESS:
-
             # find all invocations
             get_invocation = self._format_action_invocation
             invocations = [get_invocation(action)]
