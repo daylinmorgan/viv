@@ -1,7 +1,7 @@
 Set Height 750
 Set Width 1500
 Set Theme "Catppuccin Mocha"
-Output ./docs/freeze.gif
+Output ./freeze.gif
 
 Type "viv freeze --help"
 Enter

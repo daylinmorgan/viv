@@ -22,11 +22,13 @@ install: ## symlink to $PREFIX
 uninstall: ## delete $(PREFIX)/viv
 	rm $(PREFIX)/viv
 
-docs: docs/demo.gif docs/freeze.gif ## generate usage examples
+TAPES = demo freeze list-info-rm
+GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
+docs: $(GIFS) ## generate usage examples
 
 docs/%.gif: docs/%.tape
 	viv rm $$(viv l -q)
-	vhs < $<
+	cd docs; vhs < $*.tape
 
 clean: ## remove build artifacts
 	rm -rf {build,dist}
