@@ -81,16 +81,13 @@ def _viv_activate(*pkgs: str, track_exe: bool = False, name: str = "") -> None: 
         p = run([envpath/"bin"/"pip","install","--force-reinstall", *spec], universal_newlines=True, # noqa
             **dict(zip(("stdout","stderr"),[(-1,-2),(None,)*2,][e(ge("VIV_VERBOSE"))]))) # noqa
         if (p.returncode!=0)*envpath.is_dir():i("shutil").rmtree(str(envpath)) # noqa
-        if p.returncode!=0:sys.stderr.write(f"pip had non zero exit ({p.returncode})\\n{p.stdout}");sys.exit(p.returncode) # noqa
+        if p.returncode!=0:sys.stderr.write(f"pip had non zero exit ({p.returncode})\n{p.stdout}");sys.exit(p.returncode) # noqa
         with (envpath/"viv-info.json").open("w") as f: # noqa
             i("json").dump({"created":str(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe},f) # noqa
     sys.path = [p for p in (*sys.path, str(*(envpath/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE] # noqa
-
-_viv_activate("markdown-it-py==2.2.0", "mdurl==0.1.2", "Pygments==2.14.0", "rich==13.3.2") # noqa
-
+_viv_activate("markdown-it-py==2.2.0", "mdurl==0.1.2", "Pygments==2.14.0", "rich==13.3.2")
 # fmt: on
 # >>>>> code golfed with <3
-
 ```
 
 ## Alternatives

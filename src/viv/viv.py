@@ -503,12 +503,11 @@ def _viv_activate(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
         p = run([envpath/"bin"/"pip","install","--force-reinstall", *spec], universal_newlines=True,
             **dict(zip(("stdout","stderr"),[(-1,-2),(None,)*2,][e(ge("VIV_VERBOSE"))])))
         if (p.returncode!=0)*envpath.is_dir():i("shutil").rmtree(str(envpath))
-        if p.returncode!=0:sys.stderr.write(f"pip had non zero exit ({{p.returncode}})\\n{{p.stdout}}");sys.exit(p.returncode)
+        if p.returncode!=0:sys.stderr.write(f"pip had non zero exit ({{p.returncode}})\n{{p.stdout}}");sys.exit(p.returncode)
         with (envpath/"viv-info.json").open("w") as f:
             i("json").dump({{"created":str(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}},f)
     sys.path = [p for p in (*sys.path, str(*(envpath/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
 _viv_activate({spec})
-
 """.splitlines()[  # noqa
         1:
     ]
