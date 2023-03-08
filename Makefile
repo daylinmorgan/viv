@@ -22,7 +22,7 @@ install: ## symlink to $PREFIX
 uninstall: ## delete $(PREFIX)/viv
 	rm $(PREFIX)/viv
 
-TAPES = demo freeze list-info-rm
+TAPES = demo freeze list-info-remove
 GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
 docs: $(GIFS) ## generate usage examples
 

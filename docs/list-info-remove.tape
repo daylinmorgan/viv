@@ -1,7 +1,7 @@
 Set Height 750
 Set Width 1500
 Set Theme "Catppuccin Mocha"
-Output ./list-info-rm.gif
+Output ./list-info-remove.gif
 
 Type "cat demo.py"
 Enter

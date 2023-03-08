@@ -9,3 +9,7 @@
 # Freeze
 
 <img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/freeze.gif" alt="demo" width=600 >
+
+# List | Info | Remove
+
+<img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/list-info-remove.gif" alt="demo" width=600 >
