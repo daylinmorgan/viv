@@ -27,3 +27,12 @@ dev = [
   "pre-commit>=3",
   "mypy>=0.991"
 ]
+
+[tool.ruff]
+line-length = 88
+ignore = ["E402"]
+
+[tool.mypy]
+warn_return_any = true
+check_untyped_defs = true
+warn_unused_configs = true
