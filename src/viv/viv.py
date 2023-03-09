@@ -485,33 +485,34 @@ STANDALONE_TEMPLATE = r"""
 # >>>>> code golfed with <3
 """  # noqa
 
-STANDALONE_TEMPLATE_ACTIVATE = " # noqa\n".join(
-    r"""
+STANDALONE_TEMPLATE_ACTIVATE = r"""
 def _viv_activate(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
-    i,m,e = __import__,map,lambda x: True if x else False
-    if not {{*m(type, pkgs)}} == {{str}}: raise ValueError(f"spec: {{pkgs}} is invalid")
-    ge,sys,P,exe = i("os").getenv,i("sys"),i("pathlib").Path,i("sys").executable
-    vivcache = (P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs");vivcache.mkdir(parents=True, exist_ok=True)
-    spec,exe_path = [*pkgs], (str(P(exe).resolve()) if track_exe else "N/A")
-    hash = i("hashlib").sha256(); hash.update(str(spec).encode())
-    if track_exe: hash.update(exe_path.encode())
-    _id = hash.hexdigest()
-    name, envpath = (lambda n: (n,vivcache/n))(name if name else _id)
-    if name not in (d.name for d in vivcache.iterdir()) or ge("VIV_FORCE"):
-        run = i("subprocess").run; i("venv").EnvBuilder(with_pip=True, clear=True).create(envpath)
-        with (envpath/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check = true")
-        p = run([envpath/"bin"/"pip","install","--force-reinstall", *spec], universal_newlines=True,
-            **dict(zip(("stdout","stderr"),[(-1,-2),(None,)*2,][e(ge("VIV_VERBOSE"))])))
-        if (p.returncode!=0)*envpath.is_dir():i("shutil").rmtree(str(envpath))
-        if p.returncode!=0:sys.stderr.write(f"pip had non zero exit ({{p.returncode}})\n{{p.stdout}}");sys.exit(p.returncode)
-        with (envpath/"viv-info.json").open("w") as f:
-            i("json").dump({{"created":str(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}},f)
-    sys.path = [p for p in (*sys.path, str(*(envpath/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
+    i,s,m,e,spec=__import__,str,map,lambda x: True if x else False, [*pkgs]
+    if not {{*m(type,pkgs)}}=={{s}}: raise ValueError(f"spec: {{pkgs}} is invalid")
+    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
+    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=True, exist_ok=True)
+    ((hash:=i("hashlib").sha256()).update((s(spec)+
+     (((exe:=s(P(i("sys").executable).resolve()) if track_exe else "N/A")))).encode()))
+    if (env:=cache/(name if name else (_id:=hash.hexdigest()))) not in cache.glob("*/") or ge("VIV_FORCE"):
+        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {{env.name}}\n")
+        i("venv").EnvBuilder(with_pip=True,clear=True).create(env)
+        with (env/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check=true")
+        if (p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=True,
+            stdout=(-1,None)[v],stderr=(-2,None)[v])).returncode!=0:
+            if env.is_dir():i("shutil").rmtree(env)
+            ew(f"pip had non zero exit ({{p.returncode}})\n{{p.stdout}}\n");sys.exit(p.returncode)
+        with (env/"viv-info.json").open("w") as f:
+            i("json").dump({{"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}},f)
+    sys.path = [p for p in (*sys.path,s(*(env/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
 _viv_activate({spec})
-""".splitlines()[  # noqa
-        1:
-    ]
-)
+"""[  # noqa
+    1:
+]
+
+
+def noqa(txt: str) -> str:
+    max_length = max(map(len, txt.splitlines()))
+    return "\n".join((f"{line:{max_length}} # noqa" for line in txt.splitlines()))
 
 
 def spec_to_import(spec: List[str]) -> None:
@@ -584,8 +585,10 @@ def generate_import(
         sys.stdout.write(
             STANDALONE_TEMPLATE.format(
                 version=__version__,
-                activate=STANDALONE_TEMPLATE_ACTIVATE.format(
-                    spec=", ".join(f'"{pkg}"' for pkg in resolved_spec.splitlines())
+                activate=noqa(
+                    STANDALONE_TEMPLATE_ACTIVATE.format(
+                        spec=", ".join(f'"{pkg}"' for pkg in resolved_spec.splitlines())
+                    )
                 ),
             )
             + "\n"
