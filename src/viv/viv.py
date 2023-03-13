@@ -487,13 +487,13 @@ STANDALONE_TEMPLATE = r"""
 
 STANDALONE_TEMPLATE_ACTIVATE = r"""
 def _viv_activate(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
-    i,s,m,e,spec=__import__,str,map,lambda x: True if x else False, [*pkgs]
+    i,s,m,e,spec=__import__,str,map,lambda x: True if x else False,[*pkgs]
     if not {{*m(type,pkgs)}}=={{s}}: raise ValueError(f"spec: {{pkgs}} is invalid")
     ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
-    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=True, exist_ok=True)
-    ((hash:=i("hashlib").sha256()).update((s(spec)+
+    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=True,exist_ok=True)
+    ((sha256:=i("hashlib").sha256()).update((s(spec)+
      (((exe:=s(P(i("sys").executable).resolve()) if track_exe else "N/A")))).encode()))
-    if (env:=cache/(name if name else (_id:=hash.hexdigest()))) not in cache.glob("*/") or ge("VIV_FORCE"):
+    if (env:=cache/(name if name else (_id:=sha256.hexdigest()))) not in cache.glob("*/") or ge("VIV_FORCE"):
         v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {{env.name}}\n")
         i("venv").EnvBuilder(with_pip=True,clear=True).create(env)
         with (env/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check=true")
