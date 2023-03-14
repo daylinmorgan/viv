@@ -67,22 +67,22 @@ class Spinner:
     def write_next(self):
         with self._screen_lock:
             if not self.spinner_visible:
-                sys.stdout.write(next(self.spinner))
+                sys.stderr.write(next(self.spinner))
                 self.spinner_visible = True
-                sys.stdout.flush()
+                sys.stderr.flush()
 
     def remove_spinner(self, cleanup=False):
         with self._screen_lock:
             if self.spinner_visible:
-                sys.stdout.write("\b\b\b")
+                sys.stderr.write("\b\b\b")
                 # sys.stdout.write("\b")
                 self.spinner_visible = False
                 if cleanup:
-                    sys.stdout.write("   ")  # overwrite spinner with blank
+                    sys.stderr.write("   ")  # overwrite spinner with blank
                     # sys.stdout.write("\r")  # move to next line
                     # move back then delete the line
-                    sys.stdout.write("\r\033[K")
-                sys.stdout.flush()
+                    sys.stderr.write("\r\033[K")
+                sys.stderr.flush()
 
     def spinner_task(self):
         while self.busy:
@@ -91,18 +91,18 @@ class Spinner:
             self.remove_spinner()
 
     def __enter__(self):
-        if sys.stdout.isatty():
+        if sys.stderr.isatty():
             self._screen_lock = threading.Lock()
             self.busy = True
             self.thread = threading.Thread(target=self.spinner_task)
             self.thread.start()
 
     def __exit__(self, exc_type, exc_val, exc_traceback):  # noqa
-        if sys.stdout.isatty():
+        if sys.stderr.isatty():
             self.busy = False
             self.remove_spinner(cleanup=True)
         else:
-            sys.stdout.write("\r")
+            sys.stderr.write("\r")
 
 
 BOX: Dict[str, str] = {
@@ -136,7 +136,7 @@ class Ansi:
     metavar: str = "\033[33m"  # normal yellow
 
     def __post_init__(self):
-        if os.getenv("NO_COLOR") or not sys.stdout.isatty():
+        if os.getenv("NO_COLOR") or not sys.stderr.isatty():
             for attr in self.__dict__:
                 setattr(self, attr, "")
 
@@ -248,9 +248,9 @@ class Ansi:
             )
         )
 
-        sys.stdout.write(f"  {BOX['tl']}{BOX['h']*(sum(sizes)+5)}{BOX['tr']}\n")
-        sys.stdout.write("\n".join(table_rows) + "\n")
-        sys.stdout.write(f"  {BOX['bl']}{BOX['h']*(sum(sizes)+5)}{BOX['br']}\n")
+        sys.stderr.write(f"  {BOX['tl']}{BOX['h']*(sum(sizes)+5)}{BOX['tr']}\n")
+        sys.stderr.write("\n".join(table_rows) + "\n")
+        sys.stderr.write(f"  {BOX['bl']}{BOX['h']*(sum(sizes)+5)}{BOX['br']}\n")
 
 
 a = Ansi()
@@ -268,12 +268,12 @@ def warn(msg):
     echo(f"{a.yellow}warn:{a.end} {msg}", style="yellow")
 
 
-def echo(msg: str, style="magenta", newline=True) -> None:
+def echo(msg: str, style="magenta", newline=True, fd=sys.stderr) -> None:
     """output general message to stdout"""
     output = f"{a.cyan}Viv{a.end}{a.__dict__[style]}::{a.end} {msg}"
     if newline:
         output += "\n"
-    sys.stdout.write(output)
+    fd.write(output)
 
 
 def run(
