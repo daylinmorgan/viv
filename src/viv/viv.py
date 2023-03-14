@@ -333,14 +333,15 @@ def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
     Returns:
         sha256 representation of dependencies for vivenv
     """
-    pkg_hash = hashlib.sha256()
-    pkg_hash.update(str(spec).encode())
 
-    # generate unique venvs for unique python exe's
-    if track_exe:
-        pkg_hash.update(str(Path(sys.executable).resolve()).encode())
+    sha256 = hashlib.sha256()
+    sha256.update(
+        (
+            str(spec) + (str(Path(sys.executable).resolve()) if track_exe else "N/A")
+        ).encode()
+    )
 
-    return pkg_hash.hexdigest()
+    return sha256.hexdigest()
 
 
 class ViVenv:
