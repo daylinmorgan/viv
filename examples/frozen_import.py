@@ -6,7 +6,7 @@ This import statement was generated using
 Using viv freeze ensures future runs of this
 script will use the same essential environment
 """
-__import__("viv").activate(
+__import__("viv").use(
     "numpy==1.24.0",
     "pandas==1.5.2",
     "python-dateutil==2.8.2",

@@ -7,7 +7,7 @@ it will generate a new vivenv.
 It may be important to require a exe specificty if you are frequently running
 different version of pythons and rely on c extension modules as in numpy.
 """
-__import__("viv").activate("numpy", "plotext", track_exe=True)  # noqa
+__import__("viv").use("numpy", "plotext", track_exe=True)  # noqa
 
 import numpy as np
 import plotext as plt

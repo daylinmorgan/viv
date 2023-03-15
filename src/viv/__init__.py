@@ -1,1 +1,1 @@
-from .viv import activate  # noqa
+from .viv import use  # noqa

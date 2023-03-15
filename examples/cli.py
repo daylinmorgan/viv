@@ -4,7 +4,7 @@ It can be convenient to quickly generate a cli for a short script.
 Or to add simple visualization of data using the wonderful rich library.
 """
 
-__import__("viv").activate("typer", "rich-click")  # noqa
+__import__("viv").use("typer", "rich-click")  # noqa
 
 import typer
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__import__("viv").activate("pyfiglet==0.8.post1")  # noqa
+__import__("viv").use("pyfiglet==0.8.post1")  # noqa
 
 from pyfiglet import Figlet
 

@@ -6,7 +6,7 @@ modified from:
 https://medium.com/analytics-vidhya/a-super-easy-python-script-for-web-scraping-that-anybody-can-use-d3bd6ab86c89
 """
 
-__import__("viv").activate("requests", "bs4", "rich")  # noqa
+__import__("viv").use("requests", "bs4", "rich")  # noqa
 
 import requests
 from bs4 import BeautifulSoup

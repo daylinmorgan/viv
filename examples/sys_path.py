@@ -7,7 +7,7 @@ Embed the viv.py on the sys.path at runtime rather than using PYTHONPATH
 __import__("sys").path.append(
     __import__("os").path.expanduser("~/.viv/src")
 )  # noqa # isort: off
-__import__("viv").activate("pyfiglet")  # noqa # isort: off
+__import__("viv").use("pyfiglet")  # noqa # isort: off
 
 import sys
 

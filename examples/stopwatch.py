@@ -3,7 +3,7 @@
 https://github.com/Textualize/textual/tree/main/docs/examples/tutorial
 """
 
-__import__("viv").activate("textual")
+__import__("viv").use("textual")
 
 from time import monotonic
 
