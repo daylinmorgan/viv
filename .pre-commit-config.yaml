@@ -20,3 +20,10 @@ repos:
     rev: 'v0.0.245'
     hooks:
       - id: ruff
+  - repo: local
+    hooks:
+      - id: set-version
+        language: script
+        name: sets __version__ in viv.py
+        entry: ./scripts/bump-dev.sh
+        files: viv.py$

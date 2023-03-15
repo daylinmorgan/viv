@@ -30,7 +30,7 @@ from pathlib import Path
 from textwrap import dedent, wrap
 from typing import Dict, List, Tuple
 
-__version__ = "22.12a3"
+__version__ = "22.12a3-34-g1e74ebf-dev"
 
 
 @dataclass
