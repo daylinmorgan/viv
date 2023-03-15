@@ -30,7 +30,7 @@ from pathlib import Path
 from textwrap import dedent, wrap
 from typing import Dict, List, Tuple
 
-__version__ = "22.12a3-34-g1e74ebf-dev"
+__version__ = "22.12a3-35-g0d0c66d-dev"
 
 
 @dataclass
@@ -38,9 +38,7 @@ class Config:
     """viv config manager"""
 
     venvcache: Path = (
-        Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".local" / "cache"))
-        / "viv"
-        / "venvs"
+        Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "venvs"
     )
 
     def __post_init__(self):
