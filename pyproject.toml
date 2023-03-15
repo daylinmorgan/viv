@@ -29,7 +29,6 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 88
 ignore = ["E402"]
 
 [tool.mypy]
