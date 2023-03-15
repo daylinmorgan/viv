@@ -807,7 +807,7 @@ class Viv:
         """create import statement from package spec"""
 
         if not args.reqs:
-            print("must specify a requirement")
+            error("must specify a requirement")
             sys.exit(1)
 
         generate_import(
@@ -848,7 +848,7 @@ class Viv:
 
         pip_path, python_path = (vivenv.path / "bin" / cmd for cmd in ("pip", "python"))
         # todo check for vivenv
-        print(f"executing command within {args.vivenv}")
+        echo(f"executing command within {args.vivenv}")
 
         cmd = (
             f"{pip_path} {' '.join(args.cmd)}"
