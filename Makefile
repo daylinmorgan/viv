@@ -10,6 +10,7 @@ types: ## run mypy
 bump-version: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
 	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
+	@sed 's/--branch .* g/--branch $(VERSION) g/g' README.md
 	@git add src/viv/viv.py && git commit -m "chore: bump version"
 	@git tag v$(VERSION)
 
