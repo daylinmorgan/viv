@@ -1,25 +1,16 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-added-large-files
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 23.3.0
     hooks:
       - id: black
         language_version: python
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.245'
+    rev: 'v0.0.270'
     hooks:
       - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
   - repo: local
     hooks:
       - id: set-version
