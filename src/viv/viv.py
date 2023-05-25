@@ -49,7 +49,7 @@ from typing import (
     Generator,
 )
 
-__version__ = "22.12a3-39-gee7fe64-dev"
+__version__ = "22.12a3-41-g5c40210-dev"
 
 
 @dataclass
@@ -578,36 +578,29 @@ def generate_import(
     keep: bool,
     standalone: bool,
 ) -> None:
-    # TODO: make compatible with Venv class for now just use the name /tmp/
     reqs_from_file = []
 
     if requirements:
         with requirements.open("r") as f:
             reqs_from_file = f.readlines()
 
-    # refactor to make the below steps context dependent with tmpdir path
+    with tempfile.TemporaryDirectory() as tmpdir:
+        echo("generating frozen spec")
+        vivenv, resolved_spec = freeze_venv(reqs + reqs_from_file, path=Path(tmpdir))
+
     if keep:
-        # TODO: remove directory if any errors occur?
-        echo("generating new vivenv")
-        vivenv, resolved_spec = freeze_venv(reqs + reqs_from_file)
+        # create env again since path's are hard-coded
+        vivenv = ViVenv(resolved_spec.splitlines())
 
-        # update id and move vivenv
-        vivenv.spec = resolved_spec.splitlines()
-        vivenv.id = get_hash(resolved_spec.splitlines())
-        echo(f"updated hash -> {vivenv.id}")
-
-        if not (c.venvcache / vivenv.id).exists():
-            vivenv.path = vivenv.path.rename(c.venvcache / vivenv.id)
+        if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
+            "VIV_FORCE"
+        ):
+            vivenv.create()
+            vivenv.install_pkgs()
             vivenv.dump_info(write=True)
+
         else:
-            echo("this vivenv already exists cleaning up temporary vivenv")
-            shutil.rmtree(vivenv.path)
-    else:
-        with tempfile.TemporaryDirectory() as tmpdir:  #
-            echo("generating temporary vivenv ")
-            vivenv, resolved_spec = freeze_venv(
-                reqs + reqs_from_file, path=Path(tmpdir)
-            )
+            echo("re-using existing vivenv")
 
     echo("see below for import statements\n")
 
