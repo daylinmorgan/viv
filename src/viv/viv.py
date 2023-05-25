@@ -21,6 +21,8 @@ import sys
 import tempfile
 import threading
 import time
+from urllib.request import urlopen
+from urllib.error import HTTPError
 import venv
 from argparse import SUPPRESS, Action
 from argparse import ArgumentParser as StdArgParser
@@ -39,6 +41,7 @@ from types import TracebackType
 from typing import (
     Any,
     Dict,
+    Generator,
     List,
     NoReturn,
     Optional,
@@ -46,10 +49,9 @@ from typing import (
     TextIO,
     Tuple,
     Type,
-    Generator,
 )
 
-__version__ = "22.12a3-41-g5c40210-dev"
+__version__ = "22.12a3-64-gf27cdf8-dev"
 
 
 @dataclass
@@ -59,9 +61,22 @@ class Config:
     venvcache: Path = (
         Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "venvs"
     )
+    srccache: Path = (
+        Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "src"
+    )
+    srcdefault: Path = (
+        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        / "viv"
+        / "viv.py"
+    )
 
     def __post_init__(self) -> None:
         self.venvcache.mkdir(parents=True, exist_ok=True)
+        self.srccache.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        self.srcdefault.parent.mkdir(parents=True, exist_ok=True)
 
 
 c = Config()
@@ -235,6 +250,9 @@ class Ansi:
         else:
             return (row,)
 
+    def viv_preamble(self, style: str = "magenta", sep: str = "::") -> str:
+        return f"{self.cyan}Viv{self.end}{self.__dict__[style]}{sep}{self.end}"
+
     def table(
         self, rows: Tuple[Tuple[str, Sequence[str]], ...], header_style: str = "cyan"
     ) -> None:
@@ -299,10 +317,25 @@ def echo(
     msg: str, style: str = "magenta", newline: bool = True, fd: TextIO = sys.stderr
 ) -> None:
     """output general message to stdout"""
-    output = f"{a.cyan}Viv{a.end}{a.__dict__[style]}::{a.end} {msg}"
+    output = f"{a.viv_preamble(style)} {msg}"
     if newline:
         output += "\n"
     fd.write(output)
+
+
+def confirm(question: str, context: str = "") -> bool:
+    sys.stderr.write(context)
+    sys.stderr.write(
+        a.viv_preamble(sep="?? ") + question + a.style(" (Y)es/(n)o: ", "yellow")
+    )
+    while True:
+        ans = input().strip().lower()
+        if ans in ("y", "yes"):
+            return True
+        elif ans in ("n", "no"):
+            return False
+        sys.stdout.write("Please select (Y)es or (n)o. ")
+    sys.stdout.write("\n")
 
 
 def run(
@@ -448,7 +481,7 @@ class ViVenv:
             a.table((("key", "value"), *((k, v) for k, v in info.items())))
 
 
-def use(*packages: str, track_exe: bool = False, name: str = "") -> None:
+def use(*packages: str, track_exe: bool = False, name: str = "") -> ViVenv:
     """create a vivenv and append to sys.path
 
     Args:
@@ -467,6 +500,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> None:
         vivenv.dump_info(write=True)
 
     modify_sys_path(vivenv.path)
+    return vivenv
 
 
 def validate_spec(spec: Tuple[str, ...]) -> None:
@@ -515,8 +549,7 @@ STANDALONE_TEMPLATE = r"""
 # >>>>> code golfed with <3
 """  # noqa
 
-STANDALONE_TEMPLATE_USE = r"""
-def _viv_use(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
+STANDALONE_TEMPLATE_USE = r"""def _viv_use(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
     i,s,m,e,spec=__import__,str,map,lambda x: True if x else False,[*pkgs]
     if not {{*m(type,pkgs)}}=={{s}}: raise ValueError(f"spec: {{pkgs}} is invalid")
     ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
@@ -535,9 +568,27 @@ def _viv_use(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
             i("json").dump({{"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}},f)
     sys.path = [p for p in (*sys.path,s(*(env/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
 _viv_use({spec})
-"""[  # noqa
-    1:
-]
+"""  # noqa
+
+SHOW_TEMPLATE = f"""
+  {a.style('Version', 'bold')}: {{version}}
+  {a.style('CLI', 'bold')}: {{cli}}
+  {a.style('Running Source', 'bold')}: {{running_src}}
+  {a.style('Local Source', 'bold')}: {{local_src}}
+"""
+
+INSTALL_TEMPLATE = f"""
+  Install viv.py to {a.green}{{src_location}}{a.end}
+  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
+
+"""
+
+UPDATE_TEMPLATE = f"""
+  Update source at {a.green}{{src_location}}{a.end}
+  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
+  Version {a.bold}{{local_version}}{a.end} -> {a.bold}{{next_version}}{a.end}
+
+"""
 
 
 def noqa(txt: str) -> str:
@@ -691,7 +742,7 @@ class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
         # determine the required width and the entry label
         help_position = min(self._action_max_length + 2, self._max_help_position)
         help_width = max(self._width - help_position, 11)
-        action_width = help_position - self._current_indent - 2
+        action_width = help_position - self._current_indent
         action_header = self._format_action_invocation(action)
         action_header_len = len(a.escape(action_header))
 
@@ -763,7 +814,8 @@ class ArgumentParser(StdArgParser):
         super().__init__(*args, **kwargs)
 
         self.formatter_class = lambda prog: CustomHelpFormatter(
-            prog, max_help_position=35
+            prog,
+            max_help_position=35,
         )
 
     def error(self, message: str) -> NoReturn:
@@ -776,18 +828,76 @@ class ArgumentParser(StdArgParser):
 description = f"""
 
 {a.tagline()}
-
-{a.style('create/activate a vivenv','underline')}
-from command line:
-  `{a.style("viv -h","bold")}`
-within python script:
-  {a.style('__import__("viv").use("typer", "rich-click")','bold')}
+to create/activate a vivenv:
+- from command line: `{a.style("viv -h","bold")}`
+- within python script: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
+
+
+def fetch_source(reference: str) -> str:
+    try:
+        r = urlopen(
+            "https://raw.githubusercontent.com/daylinmorgan/viv/"
+            + reference
+            + "/src/viv/viv.py"
+        )
+    except HTTPError as e:
+        error(
+            "Issue updating viv see below:"
+            + a.style("->  ", "red").join(["\n"] + repr(e).splitlines())
+        )
+        if "404" in repr(e):
+            echo("Please check your reference is valid.", style="red")
+        sys.exit(1)
+
+    src = r.read()
+    (hash := hashlib.sha256()).update(src)
+    sha256 = hash.hexdigest()
+
+    cached_src_file = c.srccache / f"{sha256}.py"
+
+    if not cached_src_file.is_file():
+        with cached_src_file.open("w") as f:
+            f.write(src.decode())
+
+    return sha256
+
+
+def make_executable(path: Path) -> None:
+    """apply an executable bit for all users with read access"""
+    mode = os.stat(path).st_mode
+    mode |= (mode & 0o444) >> 2  # copy R bits to X
+    os.chmod(path, mode)
 
 
 class Viv:
     def __init__(self) -> None:
         self.vivenvs = get_venvs()
+        self._get_sources()
+        self.name = (
+            "viv" if self.local else "python3 <(curl -fsSL gh.dayl.in/viv/viv.py)"
+        )
+
+    def _get_sources(self) -> None:
+        self.local_source: Path | str
+        self.running_source = Path(__file__).resolve()
+        self.local = not str(self.running_source).startswith("/proc/")
+        if self.local:
+            self.local_source = self.running_source
+            self.local_version = __version__
+        else:
+            try:
+                _local_viv = __import__("viv")
+                self.local_source = (
+                    _local_viv.__file__ if _local_viv.__file__ else "Not Found"
+                )
+                self.local_version = _local_viv.__version__
+            except ImportError:
+                self.local_source = self.local_version = "Not Found"
+
+        self.git = self.local_source != "Not Found" and str(self.local_source).endswith(
+            "src/viv/__init__.py"
+        )
 
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
         # TODO: improve matching algorithm to favor names over id's
@@ -895,11 +1005,116 @@ class Viv:
 
         vivenv.dump_info()
 
+    def _install_local_src(self, sha256: str, src: Path, cli: Path) -> None:
+        echo("updating local source copy of viv")
+        shutil.copy(c.srccache / f"{sha256}.py", src)
+        make_executable(src)
+        echo("symlinking cli")
+
+        if not cli.is_file():
+            cli.symlink_to(src)
+        else:
+            cli.unlink()
+            cli.symlink_to(src)
+
+        echo("Remember to include the following line in your shell rc file:")
+        sys.stderr.write(
+            '  export PYTHONPATH="$PYTHONPATH:$HOME/'
+            f'{src.relative_to(Path.home())}"\n'
+        )
+
+    def manage(self, args: Namespace) -> None:
+        """manage viv itself"""
+
+        if args.cmd == "show":
+            echo("Current:")
+            sys.stdout.write(
+                SHOW_TEMPLATE.format(
+                    version=__version__,
+                    cli=shutil.which("viv"),
+                    running_src=self.running_source,
+                    local_src=self.local_source,
+                )
+            )
+
+        elif args.cmd == "update":
+            if self.local_source == "Not Found":
+                error(
+                    a.style("viv manage update", "bold")
+                    + " should be used with an exisiting installation",
+                    1,
+                )
+
+            if self.git:
+                error(
+                    a.style("viv manage update", "bold")
+                    + " shouldn't be used with a git-based installation",
+                    1,
+                )
+            sha256 = fetch_source(args.reference)
+            sys.path.append(str(c.srccache))
+            next_version = __import__(sha256).__version__
+
+            if self.local_version == next_version:
+                echo(f"no change between {args.reference} and local version")
+                sys.exit(0)
+
+            if confirm(
+                "Would you like to perform the above installation steps?",
+                UPDATE_TEMPLATE.format(
+                    src_location=self.local_source,
+                    local_version=self.local_version,
+                    cli_location=args.cli,
+                    next_version=next_version,
+                ),
+            ):
+                self._install_local_src(
+                    sha256,
+                    Path(
+                        args.src
+                        if self.local_source == "Not Found"
+                        else self.local_source,
+                    ),
+                    args.cli,
+                )
+
+        elif args.cmd == "install":
+            if not self.local_source == "Not Found":
+                error(f"found existing viv installation at {self.local_source}")
+                echo(
+                    "use "
+                    + a.style("viv manage update", "bold")
+                    + " to modify current installation.",
+                    style="red",
+                )
+                sys.exit(1)
+
+            sha256 = fetch_source(args.reference)
+            sys.path.append(str(c.srccache))
+            downloaded_version = __import__(sha256).__version__
+            echo(f"Downloaded version: {downloaded_version}")
+
+            # TODO: see if file is actually where
+            # we are about to install and give more instructions
+
+            if confirm(
+                "Would you like to perform the above installation steps?",
+                INSTALL_TEMPLATE.format(
+                    src_location=args.src,
+                    cli_location=args.cli,
+                ),
+            ):
+                self._install_local_src(sha256, args.src, args.cli)
+
     def _get_subcmd_parser(
-        self, subparsers: _SubParsersAction[ArgumentParser], name: str, **kwargs: Any
+        self,
+        subparsers: _SubParsersAction[ArgumentParser],
+        name: str,
+        attr: Optional[str] = None,
+        **kwargs: Any,
     ) -> ArgumentParser:
         aliases = kwargs.pop("aliases", [name[0]])
-        cmd = getattr(self, name)
+        cmd = getattr(self, attr if attr else name)
         parser: ArgumentParser = subparsers.add_parser(
             name,
             help=cmd.__doc__.splitlines()[0],
@@ -914,7 +1129,7 @@ class Viv:
     def cli(self) -> None:
         """cli entrypoint"""
 
-        parser = ArgumentParser(description=description)
+        parser = ArgumentParser(prog=self.name, description=description)
         parser.add_argument(
             "-V",
             "--version",
@@ -927,10 +1142,7 @@ class Viv:
         )
         p_vivenv_arg = ArgumentParser(add_help=False)
         p_vivenv_arg.add_argument("vivenv", help="name/hash of vivenv")
-        p_list = self._get_subcmd_parser(
-            subparsers,
-            "list",
-        )
+        p_list = self._get_subcmd_parser(subparsers, "list")
 
         p_list.add_argument(
             "-q",
@@ -955,16 +1167,15 @@ class Viv:
             nargs="*",
         )
 
-        p_exe_python = p_exe_sub.add_parser(
+        p_exe_sub.add_parser(
             "python",
             help="run command with python",
             parents=[p_vivenv_arg, p_exe_shared],
-        )
-        p_exe_pip = p_exe_sub.add_parser(
+        ).set_defaults(func=self.exe, exe="python")
+
+        p_exe_sub.add_parser(
             "pip", help="run command with pip", parents=[p_vivenv_arg, p_exe_shared]
-        )
-        p_exe_python.set_defaults(func=self.exe, exe="python")
-        p_exe_pip.set_defaults(func=self.exe, exe="pip")
+        ).set_defaults(func=self.exe, exe="pip")
 
         p_remove = self._get_subcmd_parser(
             subparsers,
@@ -1008,6 +1219,46 @@ class Viv:
             "info",
             parents=[p_vivenv_arg],
         )
+        p_manage_shared = ArgumentParser(add_help=False)
+        p_manage_shared.add_argument(
+            "-r",
+            "--reference",
+            help="git reference (branch/tag/commit)",
+            default="main",
+        )
+
+        p_manage_shared.add_argument(
+            "-s",
+            "--src",
+            help="path/to/source_file",
+            default=c.srcdefault,
+        )
+        p_manage_shared.add_argument(
+            "-c",
+            "--cli",
+            help="path/to/cli (symlink to src)",
+            default=Path.home() / "bin" / "viv",
+        )
+
+        p_manage_sub = self._get_subcmd_parser(
+            subparsers,
+            name="manage",
+        ).add_subparsers(title="subcommand", metavar="<sub-cmd>", required=True)
+
+        p_manage_sub.add_parser(
+            "install", help="install viv", aliases="i", parents=[p_manage_shared]
+        ).set_defaults(func=self.manage, cmd="install")
+
+        p_manage_sub.add_parser(
+            "update",
+            help="update viv version",
+            aliases="u",
+            parents=[p_manage_shared],
+        ).set_defaults(func=self.manage, cmd="update")
+
+        p_manage_sub.add_parser(
+            "show", help="show current installation info", aliases="s"
+        ).set_defaults(func=self.manage, cmd="show")
 
         args = parser.parse_args()
 
