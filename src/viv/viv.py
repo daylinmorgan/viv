@@ -49,7 +49,7 @@ from typing import (
     Generator,
 )
 
-__version__ = "22.12a3-49-g5084208-dev"
+__version__ = "22.12a3-39-gee7fe64-dev"
 
 
 @dataclass
