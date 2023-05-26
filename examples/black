@@ -9,8 +9,6 @@ viv shim black -o ~/bin/black
 """
 
 import sys
-
-sys.path.append("/home/daylin/.viv/src")  # noqa
 import subprocess
 import viv
 
