@@ -51,7 +51,7 @@ from typing import (
     Type,
 )
 
-__version__ = "22.12a3-64-gf27cdf8-dev"
+__version__ = "22.12a3-46-gaaa6346-dev"
 
 
 @dataclass
