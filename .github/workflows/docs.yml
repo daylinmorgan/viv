@@ -1,0 +1,29 @@
+name: GitHub Pages
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Add Source to Docs
+        run: |
+          mkdir docs/viv -p
+          cp ./src/viv/viv.py docs/viv/viv.py
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # publish_dir: ./site
+          publish_dir: ./docs
