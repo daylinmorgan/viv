@@ -52,31 +52,40 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a1-dev"
+__version__ = "23.5a1-13-gc1bf007"
+STABLE = "23.5a1"
 
 
-@dataclass
 class Config:
     """viv config manager"""
 
-    venvcache: Path = (
-        Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "venvs"
-    )
-    srccache: Path = (
-        Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "src"
-    )
-    share: Path = (
-        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
-    )
+    def __init__(self) -> None:
+        self._cache = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv"
 
-    def __post_init__(self) -> None:
-        self.venvcache.mkdir(parents=True, exist_ok=True)
-        self.srccache.mkdir(
-            parents=True,
-            exist_ok=True,
+    def _ensure(self, p: Path) -> Path:
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    @property
+    def venvcache(self) -> Path:
+        return self._ensure(self._cache / "venvs")
+
+    @property
+    def srccache(self) -> Path:
+        return self._ensure(self._cache / "src")
+
+    @property
+    def binparent(self) -> Path:
+        return self._ensure(
+            Path(os.getenv("VIV_BIN_DIR", Path.home() / ".local" / "bin"))
         )
-        self.share.mkdir(parents=True, exist_ok=True)
-        self.srcdefault = self.share / "viv.py"
+
+    @property
+    def srcdefault(self) -> Path:
+        parent = (
+            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
+        )
+        return self._ensure(parent) / "viv.py"
 
 
 c = Config()
@@ -301,6 +310,17 @@ class Ansi:
 a = Ansi()
 
 
+# TODO: convet the below functions into a proper file/stream logging interface
+def echo(
+    msg: str, style: str = "magenta", newline: bool = True, fd: TextIO = sys.stderr
+) -> None:
+    """output general message to stdout"""
+    output = f"{a.viv_preamble(style)} {msg}"
+    if newline:
+        output += "\n"
+    fd.write(output)
+
+
 def error(msg: str, code: int = 0) -> None:
     """output error message and if code provided exit"""
     echo(f"{a.red}error:{a.end} {msg}", style="red")
@@ -313,20 +333,10 @@ def warn(msg: str) -> None:
     echo(f"{a.yellow}warn:{a.end} {msg}", style="yellow")
 
 
-def echo(
-    msg: str, style: str = "magenta", newline: bool = True, fd: TextIO = sys.stderr
-) -> None:
-    """output general message to stdout"""
-    output = f"{a.viv_preamble(style)} {msg}"
-    if newline:
-        output += "\n"
-    fd.write(output)
-
-
 def confirm(question: str, context: str = "") -> bool:
     sys.stderr.write(context)
     sys.stderr.write(
-        a.viv_preamble(sep="?? ") + question + a.style(" (Y)es/(n)o: ", "yellow")
+        a.viv_preamble(sep="?? ") + question + a.style(" (Y)es/(n)o ", "yellow")
     )
     while True:
         ans = input().strip().lower()
@@ -336,366 +346,6 @@ def confirm(question: str, context: str = "") -> bool:
             return False
         sys.stdout.write("Please select (Y)es or (n)o. ")
     sys.stdout.write("\n")
-
-
-def run(
-    command: List[str],
-    spinmsg: str = "",
-    clean_up_path: Optional[Path] = None,
-    verbose: bool = False,
-    ignore_error: bool = False,
-    check_output: bool = False,
-) -> str:
-    """run a subcommand
-
-    Args:
-        command: Subcommand to be run in subprocess.
-        verbose: If true, print subcommand output.
-    """
-
-    if spinmsg and not verbose:
-        with Spinner(spinmsg):
-            p = subprocess.run(
-                command,
-                stdout=None if verbose else subprocess.PIPE,
-                stderr=None if verbose else subprocess.STDOUT,
-                universal_newlines=True,
-            )
-    else:
-        p = subprocess.run(
-            command,
-            stdout=None if verbose else subprocess.PIPE,
-            stderr=None if verbose else subprocess.STDOUT,
-            universal_newlines=True,
-        )
-
-    if p.returncode != 0 and not ignore_error:
-        error("subprocess failed")
-        echo("see below for command output", style="red")
-        a.subprocess(p.stdout)
-
-        if clean_up_path and clean_up_path.is_dir():
-            shutil.rmtree(str(clean_up_path))
-
-        sys.exit(p.returncode)
-
-    elif check_output:
-        return p.stdout
-
-    else:
-        return ""
-
-
-def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
-    """generate a hash of package specifications
-
-    Args:
-        spec: sequence of package specifications
-        track_exe: if true add python executable to hash
-    Returns:
-        sha256 representation of dependencies for vivenv
-    """
-
-    sha256 = hashlib.sha256()
-    sha256.update(
-        (
-            str(spec) + (str(Path(sys.executable).resolve()) if track_exe else "N/A")
-        ).encode()
-    )
-
-    return sha256.hexdigest()
-
-
-class ViVenv:
-    def __init__(
-        self,
-        spec: List[str],
-        track_exe: bool = False,
-        id: str | None = None,
-        name: str = "",
-        path: Path | None = None,
-    ) -> None:
-        self.spec = spec
-        self.exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
-        self.id = id if id else get_hash(spec, track_exe)
-        self.name = name if name else self.id
-        self.path = path if path else c.venvcache / self.name
-
-    @classmethod
-    def load(cls, name: str) -> "ViVenv":
-        """generate a vivenv from a viv-info.json file
-        Args:
-            name: used as lookup in the vivenv cache
-        """
-        if not (c.venvcache / name / "viv-info.json").is_file():
-            warn(f"possibly corrupted vivenv: {name}")
-            return cls(name=name, spec=[""])
-        else:
-            with (c.venvcache / name / "viv-info.json").open("r") as f:
-                venvconfig = json.load(f)
-
-        vivenv = cls(name=name, spec=venvconfig["spec"], id=venvconfig["id"])
-        vivenv.exe = venvconfig["exe"]
-
-        return vivenv
-
-    def create(self) -> None:
-        echo(f"new unique vivenv -> {self.name}")
-        with Spinner("creating vivenv"):
-            builder = venv.EnvBuilder(with_pip=True, clear=True)
-            builder.create(self.path)
-
-            # add config to ignore pip version
-            with (self.path / "pip.conf").open("w") as f:
-                f.write("[global]\ndisable-pip-version-check = true")
-
-    def install_pkgs(self) -> None:
-        cmd: List[str] = [
-            str(self.path / "bin" / "pip"),
-            "install",
-            "--force-reinstall",
-        ] + self.spec
-
-        run(
-            cmd,
-            spinmsg="installing packages in vivenv",
-            clean_up_path=self.path,
-            verbose=bool(os.getenv("VIV_VERBOSE")),
-        )
-
-    def dump_info(self, write: bool = False) -> None:
-        # TODO: include associated files in 'info'
-        # means it needs to be loaded first
-        # or keep a seperate file hash in c.share?
-        info = {
-            "created": str(datetime.today()),
-            "id": self.id,
-            "spec": self.spec,
-            "exe": self.exe,
-        }
-
-        # save metadata to json file
-        if write:
-            with (self.path / "viv-info.json").open("w") as f:
-                json.dump(info, f)
-        else:
-            info["spec"] = ", ".join(self.spec)
-            a.table((("key", "value"), *((k, v) for k, v in info.items())))
-
-
-def use(*packages: str, track_exe: bool = False, name: str = "") -> ViVenv:
-    """create a vivenv and append to sys.path
-
-    Args:
-        packages: package specifications with optional version specifiers
-        track_exe: if true make env python exe specific
-        name: use as vivenv name, if not provided id is used
-    """
-    validate_spec(packages)
-    vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
-
-    if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
-        "VIV_FORCE"
-    ):
-        vivenv.create()
-        vivenv.install_pkgs()
-        vivenv.dump_info(write=True)
-
-    modify_sys_path(vivenv.path)
-    return vivenv
-
-
-def validate_spec(spec: Tuple[str, ...]) -> None:
-    """ensure spec is at least of sequence of strings
-
-    Args:
-        spec: sequence of package specifications
-    """
-    # ? make this a part of ViVenv?
-    if not set(map(type, spec)) == {str}:
-        error("unexepected input in package spec")
-        error(f"check your packages definitions: {spec}", code=1)
-
-
-def modify_sys_path(new_path: Path) -> None:
-    # remove user-site
-    for i, path in enumerate(sys.path):
-        if path == site.USER_SITE:
-            sys.path.pop(i)
-
-    sys.path.append(
-        str([p for p in (new_path / "lib").glob("python*/site-packages")][0])
-    )
-
-
-def get_venvs() -> Dict[str, ViVenv]:
-    vivenvs = {}
-    for p in c.venvcache.iterdir():
-        vivenv = ViVenv.load(p.name)
-        vivenvs[vivenv.name] = vivenv
-    return vivenvs
-
-
-SYS_PATH_TEMPLATE = """__import__("sys").path.append("{path_to_viv}")  # noqa"""
-REL_SYS_PATH_TEMPLATE = (
-    """__import__("sys").path.append(__import__("os")"""
-    """.path.expanduser("{path_to_viv}"))  # noqa"""
-)
-IMPORT_TEMPLATE = """__import__("viv").use({spec})  # noqa"""
-
-STANDALONE_TEMPLATE = r"""
-# <<<<< auto-generated by viv (v{version})
-# see `python3 <(curl -fsSL gh.dayl.in/viv/viv.py) --help`
-# fmt: off
-{func}
-# fmt: on
-# >>>>> code golfed with <3
-"""  # noqa
-
-STANDALONE_TEMPLATE_FUNC = r"""def _viv_use(*pkgs: str, track_exe: bool = False, name: str = "") -> None:
-    i,s,m,e,spec=__import__,str,map,lambda x: True if x else False,[*pkgs]
-    if not {{*m(type,pkgs)}}=={{s}}: raise ValueError(f"spec: {{pkgs}} is invalid")
-    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
-    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=True,exist_ok=True)
-    ((sha256:=i("hashlib").sha256()).update((s(spec)+
-     (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))
-    if (env:=cache/(name if name else (_id:=sha256.hexdigest()))) not in cache.glob("*/") or ge("VIV_FORCE"):
-        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {{env.name}}\n")
-        i("venv").EnvBuilder(with_pip=True,clear=True).create(env)
-        with (env/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check=true")
-        if (p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=True,
-            stdout=(-1,None)[v],stderr=(-2,None)[v])).returncode!=0:
-            if env.is_dir():i("shutil").rmtree(env)
-            ew(f"pip had non zero exit ({{p.returncode}})\n{{p.stdout}}\n");sys.exit(p.returncode)
-        with (env/"viv-info.json").open("w") as f:
-            i("json").dump({{"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}},f)
-    sys.path = [p for p in (*sys.path,s(*(env/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
-{use}
-"""  # noqa
-
-SHOW_TEMPLATE = f"""
-  {a.style('Version', 'bold')}: {{version}}
-  {a.style('CLI', 'bold')}: {{cli}}
-  {a.style('Running Source', 'bold')}: {{running_src}}
-  {a.style('Local Source', 'bold')}: {{local_src}}
-"""
-
-INSTALL_TEMPLATE = f"""
-  Install viv.py to {a.green}{{src_location}}{a.end}
-  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
-
-"""
-
-UPDATE_TEMPLATE = f"""
-  Update source at {a.green}{{src_location}}{a.end}
-  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
-  Version {a.bold}{{local_version}}{a.end} -> {a.bold}{{next_version}}{a.end}
-
-"""
-
-
-def noqa(txt: str) -> str:
-    max_length = max(map(len, txt.splitlines()))
-    return "\n".join((f"{line:{max_length}} # noqa" for line in txt.splitlines()))
-
-
-def spec_to_import(spec: List[str]) -> None:
-    spec_str = ", ".join(f'"{pkg}"' for pkg in spec)
-    sys.stdout.write(IMPORT_TEMPLATE.format(spec=spec_str) + "\n")
-
-
-def freeze_venv(spec: List[str], path: Path | None = None) -> Tuple[ViVenv, str]:
-    vivenv = ViVenv(spec, track_exe=False, path=path)
-
-    vivenv.create()
-    # populate the environment for now use
-    # custom cmd since using requirements file
-    cmd = [
-        str(vivenv.path / "bin" / "pip"),
-        "install",
-        "--force-reinstall",
-    ] + spec
-
-    run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
-
-    # generate a frozen environment
-    cmd = [str(vivenv.path / "bin" / "pip"), "freeze"]
-    resolved_spec = run(cmd, check_output=True)
-    return vivenv, resolved_spec
-
-
-def generate_import(
-    requirements: Path,
-    reqs: List[str],
-    vivenvs: Dict[str, ViVenv],
-    include_path: bool,
-    keep: bool,
-    standalone: bool,
-) -> None:
-    reqs_from_file = []
-
-    if requirements:
-        with requirements.open("r") as f:
-            reqs_from_file = f.readlines()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        echo("generating frozen spec")
-        vivenv, resolved_spec = freeze_venv(reqs + reqs_from_file, path=Path(tmpdir))
-
-    if keep:
-        # create env again since path's are hard-coded
-        vivenv = ViVenv(resolved_spec.splitlines())
-
-        if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
-            "VIV_FORCE"
-        ):
-            vivenv.create()
-            vivenv.install_pkgs()
-            vivenv.dump_info(write=True)
-
-        else:
-            echo("re-using existing vivenv")
-
-    echo("see below for import statements\n")
-
-    if standalone:
-        sys.stdout.write(
-            STANDALONE_TEMPLATE.format(
-                version=__version__,
-                func=noqa(
-                    STANDALONE_TEMPLATE_FUNC.format(
-                        use="_viv_use("
-                        + fill(
-                            ", ".join(f'"{pkg}"' for pkg in resolved_spec.splitlines()),
-                            width=100,
-                            subsequent_indent="    ",
-                        )
-                        + ")"
-                    )
-                ),
-            )
-            + "\n"
-        )
-        return
-
-    if include_path == "abs":
-        sys.stdout.write(
-            SYS_PATH_TEMPLATE.format(
-                path_to_viv=Path(__file__).resolve().absolute().parent.parent
-            )
-            + "\n"
-        )
-    elif include_path == "rel":
-        sys.stdout.write(
-            REL_SYS_PATH_TEMPLATE.format(
-                path_to_viv=str(
-                    Path(__file__).resolve().absolute().parent.parent
-                ).replace(str(Path.home()), "~")
-            )
-            + "\n"
-        )
-
-    spec_to_import(resolved_spec.splitlines())
 
 
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
@@ -829,18 +479,390 @@ class ArgumentParser(StdArgParser):
 
     def error(self, message: str) -> NoReturn:
         error(message)
-        echo("see below for help\n", style="red")
-        self.print_help()
+        echo(f"see `{self.prog} --help` for more info\n", style="red")
         sys.exit(2)
 
 
-description = f"""
+def run(
+    command: List[str],
+    spinmsg: str = "",
+    clean_up_path: Optional[Path] = None,
+    verbose: bool = False,
+    ignore_error: bool = False,
+    check_output: bool = False,
+) -> str:
+    """run a subcommand
+
+    Args:
+        command: Subcommand to be run in subprocess.
+        verbose: If true, print subcommand output.
+    """
+
+    if spinmsg and not verbose:
+        with Spinner(spinmsg):
+            p = subprocess.run(
+                command,
+                stdout=None if verbose else subprocess.PIPE,
+                stderr=None if verbose else subprocess.STDOUT,
+                universal_newlines=True,
+            )
+    else:
+        p = subprocess.run(
+            command,
+            stdout=None if verbose else subprocess.PIPE,
+            stderr=None if verbose else subprocess.STDOUT,
+            universal_newlines=True,
+        )
+
+    if p.returncode != 0 and not ignore_error:
+        error("subprocess failed")
+        echo("see below for command output", style="red")
+        a.subprocess(p.stdout)
+
+        if clean_up_path and clean_up_path.is_dir():
+            shutil.rmtree(str(clean_up_path))
+
+        sys.exit(p.returncode)
+
+    elif check_output:
+        return p.stdout
+
+    else:
+        return ""
+
+
+def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
+    """generate a hash of package specifications
+
+    Args:
+        spec: sequence of package specifications
+        track_exe: if true add python executable to hash
+    Returns:
+        sha256 representation of dependencies for vivenv
+    """
+
+    sha256 = hashlib.sha256()
+    sha256.update(
+        (
+            str(spec) + (str(Path(sys.executable).resolve()) if track_exe else "N/A")
+        ).encode()
+    )
+
+    return sha256.hexdigest()
+
+
+class ViVenv:
+    def __init__(
+        self,
+        spec: List[str],
+        track_exe: bool = False,
+        id: str | None = None,
+        name: str = "",
+        path: Path | None = None,
+    ) -> None:
+        self.spec = spec
+        self.exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
+        self.id = id if id else get_hash(spec, track_exe)
+        self.name = name if name else self.id
+        self.path = path if path else c.venvcache / self.name
+
+    @classmethod
+    def load(cls, name: str) -> "ViVenv":
+        """generate a vivenv from a viv-info.json file
+        Args:
+            name: used as lookup in the vivenv cache
+        """
+        if not (c.venvcache / name / "viv-info.json").is_file():
+            warn(f"possibly corrupted vivenv: {name}")
+            return cls(name=name, spec=[""])
+        else:
+            with (c.venvcache / name / "viv-info.json").open("r") as f:
+                venvconfig = json.load(f)
+
+        vivenv = cls(name=name, spec=venvconfig["spec"], id=venvconfig["id"])
+        vivenv.exe = venvconfig["exe"]
+
+        return vivenv
+
+    def create(self, quiet: bool = False) -> None:
+        if not quiet:
+            echo(f"new unique vivenv -> {self.name}")
+        with Spinner("creating vivenv"):
+            builder = venv.EnvBuilder(with_pip=True, clear=True)
+            builder.create(self.path)
+
+            # add config to ignore pip version
+            with (self.path / "pip.conf").open("w") as f:
+                f.write("[global]\ndisable-pip-version-check = true")
+
+    def install_pkgs(self) -> None:
+        cmd: List[str] = [
+            str(self.path / "bin" / "pip"),
+            "install",
+            "--force-reinstall",
+        ] + self.spec
+
+        run(
+            cmd,
+            spinmsg="installing packages in vivenv",
+            clean_up_path=self.path,
+            verbose=bool(os.getenv("VIV_VERBOSE")),
+        )
+
+    def dump_info(self, write: bool = False) -> None:
+        # TODO: include associated files in 'info'
+        # means it needs to be loaded first
+        # or keep a seperate file hash in c.share?
+        info = {
+            "created": str(datetime.today()),
+            "id": self.id,
+            "spec": self.spec,
+            "exe": self.exe,
+        }
+
+        # save metadata to json file
+        if write:
+            with (self.path / "viv-info.json").open("w") as f:
+                json.dump(info, f)
+        else:
+            info["spec"] = ", ".join(self.spec)
+            a.table((("key", "value"), *((k, v) for k, v in info.items())))
+
+
+def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
+    """create a vivenv and append to sys.path
+
+    Args:
+        packages: package specifications with optional version specifiers
+        track_exe: if true make env python exe specific
+        name: use as vivenv name, if not provided id is used
+    """
+    validate_spec(packages)
+    vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
+
+    if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
+        "VIV_FORCE"
+    ):
+        vivenv.create()
+        vivenv.install_pkgs()
+        vivenv.dump_info(write=True)
+
+    modify_sys_path(vivenv.path)
+    return vivenv.path
+
+
+def validate_spec(spec: Tuple[str, ...]) -> None:
+    """ensure spec is at least of sequence of strings
+
+    Args:
+        spec: sequence of package specifications
+    """
+    # ? make this a part of ViVenv?
+    if not set(map(type, spec)) == {str}:
+        error("unexepected input in package spec")
+        error(f"check your packages definitions: {spec}", code=1)
+
+
+def modify_sys_path(new_path: Path) -> None:
+    # remove user-site
+    for i, path in enumerate(sys.path):
+        if path == site.USER_SITE:
+            sys.path.pop(i)
+
+    sys.path.append(
+        str([p for p in (new_path / "lib").glob("python*/site-packages")][0])
+    )
+
+
+def get_venvs() -> Dict[str, ViVenv]:
+    vivenvs = {}
+    for p in c.venvcache.iterdir():
+        vivenv = ViVenv.load(p.name)
+        vivenvs[vivenv.name] = vivenv
+    return vivenvs
+
+
+# TODO: make a template class?
+
+SYS_PATH_TEMPLATE = """__import__("sys").path.append("{path_to_viv}")  # noqa"""
+REL_SYS_PATH_TEMPLATE = (
+    """__import__("sys").path.append(__import__("os")"""
+    """.path.expanduser("{path_to_viv}"))  # noqa"""
+)
+IMPORT_TEMPLATE = """__import__("viv").use({spec})  # noqa"""
+
+STANDALONE_TEMPLATE = r"""
+# <<<<< auto-generated by viv (v{version})
+# see `python3 <(curl -fsSL gh.dayl.in/viv/viv.py) --help`
+# fmt: off
+{func}
+# fmt: on
+# >>>>> code golfed with <3
+"""  # noqa
+
+STANDALONE_TEMPLATE_FUNC = r"""def _viv_use(*pkgs, track_exe=False, name=""):
+    T,F=True,False;i,s,m,e,spec=__import__,str,map,lambda x: T if x else F,[*pkgs]
+    if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")
+    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
+    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=T,exist_ok=T)
+    ((sha256:=i("hashlib").sha256()).update((s(spec)+
+     (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))
+    if ((env:=cache/(name if name else (_id:=sha256.hexdigest())))
+        not in cache.glob("*/")) or ge("VIV_FORCE"):
+        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {env.name}\n")
+        i("venv").EnvBuilder(with_pip=T,clear=T).create(env)
+        with (env/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check=true")
+        if (p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=True,
+            stdout=(-1,None)[v],stderr=(-2,None)[v])).returncode!=0:
+            if env.is_dir():i("shutil").rmtree(env)
+            ew(f"pip had non zero exit ({p.returncode})\n{p.stdout}\n");sys.exit(p.returncode)
+        with (env/"viv-info.json").open("w") as f:
+            i("json").dump({"created":s(i("datetime").datetime.today()),
+            "id":_id,"spec":spec,"exe":exe},f)
+    sys.path = [p for p in (*sys.path,s(*(env/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
+    return env
+"""  # noqa
+
+SHOW_TEMPLATE = f"""
+  {a.style('Version', 'bold')}: {{version}}
+  {a.style('CLI', 'bold')}: {{cli}}
+  {a.style('Running Source', 'bold')}: {{running_src}}
+  {a.style('Local Source', 'bold')}: {{local_src}}
+"""
+
+INSTALL_TEMPLATE = f"""
+  Install viv.py to {a.green}{{src_location}}{a.end}
+  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
+
+"""
+
+UPDATE_TEMPLATE = f"""
+  Update source at {a.green}{{src_location}}{a.end}
+  Symlink {a.bold}{{src_location}}{a.end} to {a.bold}{{cli_location}}{a.end}
+  Version {a.bold}{{local_version}}{a.end} -> {a.bold}{{next_version}}{a.end}
+
+"""
+
+SHIM_TEMPLATE = """\
+#!/usr/bin/env python3
+
+{imports}
+import subprocess
+import sys
+
+if __name__ == "__main__":
+    vivenv = {use}
+    sys.exit(subprocess.run([vivenv / "bin" / "{bin}", *sys.argv[1:]]).returncode)
+"""
+
+DESCRIPTION = f"""
 
 {a.tagline()}
 to create/activate a vivenv:
 - from command line: `{a.style("viv -h","bold")}`
 - within python script: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
+
+
+def noqa(txt: str) -> str:
+    max_length = max(map(len, txt.splitlines()))
+    return "\n".join((f"{line:{max_length}} # noqa" for line in txt.splitlines()))
+
+
+def spec_to_import(spec: List[str]) -> None:
+    spec_str = ", ".join(f'"{pkg}"' for pkg in spec)
+    sys.stdout.write(IMPORT_TEMPLATE.format(spec=spec_str) + "\n")
+
+
+def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
+    if requirements:
+        with requirements.open("r") as f:
+            reqs += f.readlines()
+
+    return reqs
+
+
+def resolve_deps(args: Namespace):
+    spec = combined_spec(args.reqs, args.requirements)
+
+    with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+        echo("generating frozen spec")
+        vivenv = ViVenv(spec, track_exe=False, path=Path(tmpdir))
+
+        vivenv.create(quiet=True)
+        # populate the environment for now use
+        # custom cmd since using requirements file
+        cmd = [
+            str(vivenv.path / "bin" / "pip"),
+            "install",
+            "--force-reinstall",
+        ] + spec
+
+        run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
+
+        cmd = [str(vivenv.path / "bin" / "pip"), "freeze"]
+        resolved_spec = run(cmd, check_output=True)
+    return resolved_spec.splitlines()
+
+
+def generate_import(
+    args: Namespace,
+) -> None:
+    spec = resolve_deps(args)
+    if args.keep:
+        # re-create env again since path's are hard-coded
+        vivenv = ViVenv(spec)
+
+        if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
+            "VIV_FORCE"
+        ):
+            vivenv.create()
+            vivenv.install_pkgs()
+            vivenv.dump_info(write=True)
+
+        else:
+            echo("re-using existing vivenv")
+
+    echo("see below for import statements\n")
+
+    if args.standalone:
+        sys.stdout.write(
+            STANDALONE_TEMPLATE.format(
+                version=__version__,
+                func=noqa(
+                    STANDALONE_TEMPLATE_FUNC
+                    + "_viv_use("
+                    + fill(
+                        ", ".join(f'"{pkg}"' for pkg in spec),
+                        width=100,
+                        subsequent_indent="    ",
+                    )
+                    + ")"
+                ),
+            )
+            + "\n"
+        )
+        return
+
+    if args.path:
+        if args.path == "abs":
+            sys.stdout.write(
+                SYS_PATH_TEMPLATE.format(
+                    path_to_viv=Path(__file__).resolve().absolute().parent.parent
+                )
+                + "\n"
+            )
+        elif args.path == "rel":
+            sys.stdout.write(
+                REL_SYS_PATH_TEMPLATE.format(
+                    path_to_viv=str(
+                        Path(__file__).resolve().absolute().parent.parent
+                    ).replace(str(Path.home()), "~")
+                )
+                + "\n"
+            )
+
+    spec_to_import(spec)
 
 
 def fetch_source(reference: str) -> str:
@@ -888,7 +910,7 @@ class Viv:
         )
 
     def _get_sources(self) -> None:
-        self.local_source: Path | str
+        self.local_source: Optional[Path] = None
         self.running_source = Path(__file__).resolve()
         self.local = not str(self.running_source).startswith("/proc/")
         if self.local:
@@ -898,15 +920,24 @@ class Viv:
             try:
                 _local_viv = __import__("viv")
                 self.local_source = (
-                    _local_viv.__file__ if _local_viv.__file__ else "Not Found"
+                    Path(_local_viv.__file__) if _local_viv.__file__ else None
                 )
                 self.local_version = _local_viv.__version__
             except ImportError:
-                self.local_source = self.local_version = "Not Found"
+                self.local_version = "Not Found"
 
-        self.git = self.local_source != "Not Found" and str(self.local_source).endswith(
-            "src/viv/__init__.py"
-        )
+        if self.local_source:
+            self.git = (self.local_source.parent.parent.parent / ".git").is_dir()
+        else:
+            self.git = False
+
+    def _check_local_source(self, args: Namespace) -> None:
+        if not self.local_source and not (args.standalone or args.path):
+            warn(
+                "failed to find local copy of `viv` "
+                "make sure to add it to your PYTHONPATH "
+                "or consider using --path/--standalone"
+            )
 
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
         # TODO: improve matching algorithm to favor names over id's
@@ -948,8 +979,8 @@ class Viv:
 
     def freeze(self, args: Namespace) -> None:
         """create import statement from package spec"""
-        # TODO: warn user about using anything but standalone when
-        # self.local_source is 'Not Found'
+
+        self._check_local_source(args)
 
         if not args.reqs:
             error("must specify a requirement", code=1)
@@ -957,12 +988,7 @@ class Viv:
             error("-p/--path and -s/--standalone are mutually exclusive", code=1)
 
         generate_import(
-            args.requirements,
-            args.reqs,
-            self.vivenvs,
-            args.path,
-            args.keep,
-            args.standalone,
+            args,
         )
 
     def list(self, args: Namespace) -> None:
@@ -1040,10 +1066,10 @@ class Viv:
 
         if args.cmd == "show":
             if args.pythonpath:
-                if not self.local:
-                    error("expected to find a local installation", exit=1)
-                else:
+                if self.local and self.local_source:
                     sys.stdout.write(str(self.local_source.parent) + "\n")
+                else:
+                    error("expected to find a local installation", code=1)
             else:
                 echo("Current:")
                 sys.stderr.write(
@@ -1056,7 +1082,7 @@ class Viv:
                 )
 
         elif args.cmd == "update":
-            if self.local_source == "Not Found":
+            if not self.local_source:
                 error(
                     a.style("viv manage update", "bold")
                     + " should be used with an exisiting installation",
@@ -1089,15 +1115,13 @@ class Viv:
                 self._install_local_src(
                     sha256,
                     Path(
-                        args.src
-                        if self.local_source == "Not Found"
-                        else self.local_source,
+                        args.src if not self.local_source else self.local_source,
                     ),
                     args.cli,
                 )
 
         elif args.cmd == "install":
-            if not self.local_source == "Not Found":
+            if self.local_source:
                 error(f"found existing viv installation at {self.local_source}")
                 echo(
                     "use "
@@ -1124,9 +1148,66 @@ class Viv:
             ):
                 self._install_local_src(sha256, args.src, args.cli)
 
-    def shim(self, args):
-        """generate viv-powered cli apps"""
-        echo("not implemented.")
+    def shim(self, args: Namespace) -> None:
+        """\
+        generate viv-powered cli apps
+
+        examples:
+          viv shim black
+          viv shim yartsu -o ~/bin/yartsu --standalone
+        """
+        self._check_local_source(args)
+
+        if not args.reqs:
+            error("please specify at lease one dependency", code=1)
+
+        default_bin = re.split(r"[=><~!*]+", args.reqs[0])[0]
+        bin = default_bin if not args.bin else args.bin
+        output = (
+            c.binparent / default_bin if not args.output else args.output.absolute()
+        )
+
+        if output.is_file():
+            error(f"{output} already exists...exiting", code=1)
+
+        if args.freeze:
+            spec = resolve_deps(args)
+        else:
+            spec = combined_spec(args.reqs, args.requirements)
+
+        spec_str = ", ".join(f'"{req}"' for req in spec)
+        if args.standalone:
+            imports = STANDALONE_TEMPLATE.format(
+                version=__version__, func=noqa(STANDALONE_TEMPLATE_FUNC)
+            )
+            use = f"_viv_use({spec_str})"
+        elif args.path:
+            if not self.local_source:
+                error("No local viv found to import from", code=1)
+            else:
+                imports = (
+                    REL_SYS_PATH_TEMPLATE.format(
+                        path_to_viv=str(
+                            self.local_source.resolve().absolute().parent.parent
+                        ).replace(str(Path.home()), "~")
+                    )
+                    if args.path == "abs"
+                    else SYS_PATH_TEMPLATE.format(
+                        path_to_viv=self.local_source.resolve().absolute().parent.parent
+                    )
+                )
+                use = IMPORT_TEMPLATE.format(spec=spec_str)
+        else:
+            imports = ""
+            use = IMPORT_TEMPLATE.format(spec=spec_str)
+
+        if confirm(
+            f"Write shim for {a.style(bin,'bold')} to {a.style(output,'green')}?"
+        ):
+            with output.open("w") as f:
+                f.write(SHIM_TEMPLATE.format(imports=imports, use=use, bin=bin))
+
+            make_executable(output)
 
     def _get_subcmd_parser(
         self,
@@ -1151,7 +1232,7 @@ class Viv:
     def cli(self) -> None:
         """cli entrypoint"""
 
-        parser = ArgumentParser(prog=self.name, description=description)
+        parser = ArgumentParser(prog=self.name, description=DESCRIPTION)
         parser.add_argument(
             "-V",
             "--version",
@@ -1246,9 +1327,10 @@ class Viv:
         p_manage_shared = ArgumentParser(add_help=False)
         p_manage_shared.add_argument(
             "-r",
-            "--reference",
+            "--ref",
             help="git reference (branch/tag/commit)",
             default="main",
+            metavar="<ref>",
         )
 
         p_manage_shared.add_argument(
@@ -1256,12 +1338,14 @@ class Viv:
             "--src",
             help="path/to/source_file",
             default=c.srcdefault,
+            metavar="<src>",
         )
         p_manage_shared.add_argument(
             "-c",
             "--cli",
             help="path/to/cli (symlink to src)",
-            default=Path.home() / "bin" / "viv",
+            default=Path.home() / ".local" / "bin" / "viv",
+            metavar="<cli>",
         )
 
         p_manage_sub = self._get_subcmd_parser(
@@ -1296,14 +1380,22 @@ class Viv:
             )
         ).set_defaults(func=self.shim, cmd="shim")
         p_manage_shim.add_argument(
+            "-f",
+            "--freeze",
+            help="freeze/resolve all dependencies",
+            action="store_true",
+        )
+        p_manage_shim.add_argument(
             "-o",
             "--output",
             help="path/to/output file",
+            type=Path,
             metavar="<path>",
         )
         p_manage_shim.add_argument(
             "-b", "--bin", help="console_script/script to invoke"
         )
+
         args = parser.parse_args()
 
         args.func(args)
