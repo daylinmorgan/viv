@@ -678,14 +678,14 @@ def generate_import(
         )
         return
 
-    if include_path == "absolute":
+    if include_path == "abs":
         sys.stdout.write(
             SYS_PATH_TEMPLATE.format(
                 path_to_viv=Path(__file__).resolve().absolute().parent.parent
             )
             + "\n"
         )
-    elif include_path == "relative":
+    elif include_path == "rel":
         sys.stdout.write(
             REL_SYS_PATH_TEMPLATE.format(
                 path_to_viv=str(
@@ -1120,6 +1120,7 @@ class Viv:
                 ),
             ):
                 self._install_local_src(sha256, args.src, args.cli)
+
     def shim(self, args):
         """generate viv-powered cli apps"""
         echo("not implemented.")
@@ -1202,36 +1203,38 @@ class Viv:
         )
 
         p_remove.add_argument("vivenv", help="name/hash of vivenv", nargs="*")
-        p_freeze = self._get_subcmd_parser(
-            subparsers,
-            "freeze",
-        )
-        p_freeze.add_argument(
+
+        p_freeze_shim_shared = ArgumentParser(add_help=False)
+
+        p_freeze_shim_shared.add_argument(
             "-p",
             "--path",
             help="generate line to add viv to sys.path",
-            choices=["absolute", "relative"],
+            choices=["abs", "rel"],
         )
-        p_freeze.add_argument(
+        p_freeze_shim_shared.add_argument(
             "-r",
             "--requirements",
-            help="path to requirements.txt file",
+            help="path/to/requirements.txt file",
             metavar="<path>",
         )
-        p_freeze.add_argument(
+        p_freeze_shim_shared.add_argument(
             "-k",
             "--keep",
             help="preserve environment",
             action="store_true",
         )
-        p_freeze.add_argument(
+        p_freeze_shim_shared.add_argument(
             "-s",
             "--standalone",
             help="generate standalone activation function",
             action="store_true",
         )
-        p_freeze.add_argument("reqs", help="requirements specifiers", nargs="*")
+        p_freeze_shim_shared.add_argument(
+            "reqs", help="requirements specifiers", nargs="*"
+        )
 
+        self._get_subcmd_parser(subparsers, "freeze", parents=[p_freeze_shim_shared])
         self._get_subcmd_parser(
             subparsers,
             "info",
@@ -1284,11 +1287,20 @@ class Viv:
             "-p", "--pythonpath", help="show the path/to/install", action="store_true"
         )
 
-        self._get_subcmd_parser(
-            subparsers,
-            "shim",
+        (
+            p_manage_shim := self._get_subcmd_parser(
+                subparsers, "shim", parents=[p_freeze_shim_shared]
+            )
         ).set_defaults(func=self.shim, cmd="shim")
-
+        p_manage_shim.add_argument(
+            "-o",
+            "--output",
+            help="path/to/output file",
+            metavar="<path>",
+        )
+        p_manage_shim.add_argument(
+            "-b", "--bin", help="console_script/script to invoke"
+        )
         args = parser.parse_args()
 
         args.func(args)
