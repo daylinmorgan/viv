@@ -31,7 +31,7 @@ In any case they will be re-used across scripts (and generated on-demand, if nee
 Run the below command to install `viv`.
 
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install -r v22.12a3
+python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install -r v23.5a1
 ```
 
 To access `viv` from within scripts you should add it's location to your `PYTHONPATH`.
