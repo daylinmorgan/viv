@@ -948,10 +948,13 @@ class Viv:
 
     def freeze(self, args: Namespace) -> None:
         """create import statement from package spec"""
+        # TODO: warn user about using anything but standalone when
+        # self.local_source is 'Not Found'
 
         if not args.reqs:
-            error("must specify a requirement")
-            sys.exit(1)
+            error("must specify a requirement", code=1)
+        if args.path and args.standalone:
+            error("-p/--path and -s/--standalone are mutually exclusive", code=1)
 
         generate_import(
             args.requirements,
