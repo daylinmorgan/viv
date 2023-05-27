@@ -1,17 +1,14 @@
-# Viv
+# viv
 
-<!-- PROJECT DEMO -->
 <div align="center">
   <a href="https://github.com/daylinmorgan/viv">
-    <img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/demo.gif" alt="Logo" width=600 >
+    <img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/assets/logo.svg" alt="Logo" width=500 >
   </a>
   <p align="center">
   viv isn't venv
   </p>
 </div>
 <br />
-
-See [usage](https://github.com/daylinmorgan/viv/blob/main/docs/usage.md) for more demo gifs.
 
 ---
 
@@ -26,27 +23,22 @@ prior to loading of any of the external modules.
 These `venvs` can be identified by name or by their specification.
 In any case they will be re-used across scripts (and generated on-demand, if needed).
 
-**Importantly**, `viv` will remove your user site directory (`python -m 'import site;print(site.USER_SITE)'`),
-to ensure the script isn't using anything outside the standard library and the `viv`-managed `venv`.
+**Importantly**, `viv` will also remove your user site directory.
+(view with: `python -m 'import site;print(site.USER_SITE)'`).
 
 ## Setup
 
-### Manual (Recommended)
-
-Start by cloning the repo and symlinking the script for access to the CLI.
-By default it will symlink `./src/viv/viv.py` to `~/bin/viv`.
-You can set `PREFIX` to symlink to a different location.
+Run the below command to install `viv`.
 
 ```sh
-git clone --depth 1 --branch v22.12a3 git@github.com:daylinmorgan/viv.git ~/.viv
-cd ~/.viv
-make install # or PREFIX=~/.local/bin make install
+python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install -r v22.12a3
 ```
 
-Place this directory on the python path in your rc file.
+To access `viv` from within scripts you should add it's location to your `PYTHONPATH`.
+By default `viv` will be installed to `$XDG_DATA_HOME/viv` or `~/.local/share/viv` you can customize this with `--src`.
 
 ```sh
-export PYTHONPATH="$PYTHONPATH:$HOME/.viv/src"
+export PYTHONPATH="$PYTHONPATH:$HOME/.local/share/viv"
 ```
 
 Advanced users may recognize that principally,
@@ -72,7 +64,7 @@ to automate `vivenv` creation and installation of dependencies.
 __import__("viv").use("click")
 ```
 
-To remove all `vivenvs`:
+To remove all `vivenvs` you can use the below command:
 
 ```sh
 viv remove $(viv list -q)
@@ -80,9 +72,7 @@ viv remove $(viv list -q)
 
 # Standalone Viv
 
-*Requires* `python>=3.8`
-
-Supposing you want to increase the portability of your script while still employing `viv`.
+Supposing you want to increase the portability of your script while still employing the principles of `viv`.
 
 The below function can be freely pasted at the top of your scripts and requires
 no modification of your PYTHONPATH or import of additional modules (including downloading/installing `viv`).
@@ -117,8 +107,6 @@ def _viv_use(*pkgs: str, track_exe: bool = False, name: str = "") -> None:      
 _viv_use("markdown-it-py==2.2.0", "mdurl==0.1.2", "Pygments==2.14.0", "rich==13.3.2")                         # noqa
 # fmt: on
 # >>>>> code golfed with <3
-
-
 ```
 
 ## Alternatives
