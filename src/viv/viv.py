@@ -51,7 +51,7 @@ from typing import (
     Type,
 )
 
-__version__ = "23.5a1-dev"
+__version__ = "23.5a1-1-g0b26c8c-dev"
 
 
 @dataclass
@@ -64,10 +64,8 @@ class Config:
     srccache: Path = (
         Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv" / "src"
     )
-    srcdefault: Path = (
-        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-        / "viv"
-        / "viv.py"
+    share: Path = (
+        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
     )
 
     def __post_init__(self) -> None:
@@ -76,7 +74,8 @@ class Config:
             parents=True,
             exist_ok=True,
         )
-        self.srcdefault.parent.mkdir(parents=True, exist_ok=True)
+        self.share.mkdir(parents=True, exist_ok=True)
+        self.srcdefault = self.share / "viv.py"
 
 
 c = Config()
@@ -466,12 +465,14 @@ class ViVenv:
     def dump_info(self, write: bool = False) -> None:
         # TODO: include associated files in 'info'
         # means it needs to be loaded first
+        # or keep a seperate file hash in c.share?
         info = {
             "created": str(datetime.today()),
             "id": self.id,
             "spec": self.spec,
             "exe": self.exe,
         }
+
         # save metadata to json file
         if write:
             with (self.path / "viv-info.json").open("w") as f:
