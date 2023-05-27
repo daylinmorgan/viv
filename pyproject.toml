@@ -29,6 +29,7 @@ dev = [
 ]
 
 [tool.ruff]
+select = ["E","F","I"]
 ignore = ["E402"]
 
 [tool.mypy]

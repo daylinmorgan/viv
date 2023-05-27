@@ -8,8 +8,9 @@ A possible cli signature
 viv shim black -o ~/bin/black
 """
 
-import sys
 import subprocess
+import sys
+
 import viv
 
 if __name__ == "__main__":
