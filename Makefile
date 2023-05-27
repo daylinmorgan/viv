@@ -10,26 +10,20 @@ types: ## run mypy
 bump-version: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
 	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
-	@sed 's/--branch .* g/--branch $(VERSION) g/g' README.md
-	@git add src/viv/viv.py && git commit -m "chore: bump version"
+	@sed -i 's/install -r .*/install -r v$(VERSION)/g' README.md
+	@git add src/viv/viv.py README.md && git commit -m "chore: bump version" --no-verify
 	@git tag v$(VERSION)
 
 venv: ## generate environment
 	pdm install
 
-install: ## symlink to $PREFIX
-	ln -sf $(shell pwd)/src/viv/viv.py $(PREFIX)/viv
+# TAPES = demo freeze list-info-remove
+# GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
+# docs: $(GIFS) ## generate usage examples
 
-uninstall: ## delete $(PREFIX)/viv
-	rm $(PREFIX)/viv
-
-TAPES = demo freeze list-info-remove
-GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
-docs: $(GIFS) ## generate usage examples
-
-docs/%.gif: docs/%.tape
-	viv rm $$(viv l -q)
-	cd docs; vhs < $*.tape
+# docs/%.gif: docs/%.tape
+# 	viv rm $$(viv l -q)
+# 	cd docs; vhs < $*.tape
 
 clean: ## remove build artifacts
 	rm -rf {build,dist}
