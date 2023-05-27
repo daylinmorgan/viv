@@ -51,7 +51,7 @@ from typing import (
     Type,
 )
 
-__version__ = "23.5a1"
+__version__ = "23.5a1-dev"
 
 
 @dataclass
@@ -1027,15 +1027,21 @@ class Viv:
         """manage viv itself"""
 
         if args.cmd == "show":
-            echo("Current:")
-            sys.stdout.write(
-                SHOW_TEMPLATE.format(
-                    version=__version__,
-                    cli=shutil.which("viv"),
-                    running_src=self.running_source,
-                    local_src=self.local_source,
+            if args.pythonpath:
+                if not self.local:
+                    error("expected to find a local installation", exit=1)
+                else:
+                    sys.stdout.write(str(self.local_source.parent) + "\n")
+            else:
+                echo("Current:")
+                sys.stderr.write(
+                    SHOW_TEMPLATE.format(
+                        version=__version__,
+                        cli=shutil.which("viv"),
+                        running_src=self.running_source,
+                        local_src=self.local_source,
+                    )
                 )
-            )
 
         elif args.cmd == "update":
             if self.local_source == "Not Found":
@@ -1256,9 +1262,15 @@ class Viv:
             parents=[p_manage_shared],
         ).set_defaults(func=self.manage, cmd="update")
 
-        p_manage_sub.add_parser(
-            "show", help="show current installation info", aliases="s"
+        (
+            p_manage_show := p_manage_sub.add_parser(
+                "show", help="show current installation info", aliases="s"
+            )
         ).set_defaults(func=self.manage, cmd="show")
+
+        p_manage_show.add_argument(
+            "-p", "--pythonpath", help="show the path/to/install", action="store_true"
+        )
 
         args = parser.parse_args()
 
