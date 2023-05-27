@@ -1,1 +1,1 @@
-from .viv import use, __version__  # noqa
+from .viv import __version__, use, main  # noqa

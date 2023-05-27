@@ -17,7 +17,7 @@ homepage = "https://github.com/daylinmorgan/viv"
 repository = "https://github.com/daylinmorgan/viv"
 
 [project.scripts]
-viv = "viv.viv:main"
+viv = "viv:main"
 
 [tool.pdm]
 version = { source = "scm" }
