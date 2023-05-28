@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2"
+__version__ = "23.5a2-2-gebb657c-dev"
 
 
 class Config:
@@ -1146,6 +1146,38 @@ class Viv:
                 ),
             ):
                 self._install_local_src(sha256, args.src, args.cli)
+        elif args.cmd == "purge":
+            to_remove = []
+            if c._cache.is_dir():
+                to_remove.append(c._cache)
+            if args.src.is_file():
+                to_remove.append(
+                    args.src.parent if args.src == c.srcdefault else args.src
+                )
+            if self.local_source and self.local_source.is_file():
+                if self.local_source.parent.name == "viv":
+                    to_remove.append(self.local_source.parent)
+                else:
+                    to_remove.append(self.local_source)
+
+            if args.cli.is_file():
+                to_remove.append(args.cli)
+
+            to_remove = list(set(to_remove))
+            if confirm(
+                "Remove the above files/directories?",
+                "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
+            ):
+                for p in to_remove:
+                    if p.is_dir():
+                        shutil.rmtree(p)
+                    else:
+                        p.unlink()
+
+                echo(
+                    "to re-install use: "
+                    "`python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install`"
+                )
 
     def shim(self, args: Namespace) -> None:
         """\
@@ -1373,27 +1405,29 @@ class Viv:
             "-p", "--pythonpath", help="show the path/to/install", action="store_true"
         )
 
+        p_manage_sub.add_parser(
+            "purge", help="remove traces of viv", aliases="p", parents=[p_manage_shared]
+        ).set_defaults(func=self.manage, cmd="purge")
+
         (
-            p_manage_shim := self._get_subcmd_parser(
+            p_shim := self._get_subcmd_parser(
                 subparsers, "shim", parents=[p_freeze_shim_shared]
             )
         ).set_defaults(func=self.shim, cmd="shim")
-        p_manage_shim.add_argument(
+        p_shim.add_argument(
             "-f",
             "--freeze",
             help="freeze/resolve all dependencies",
             action="store_true",
         )
-        p_manage_shim.add_argument(
+        p_shim.add_argument(
             "-o",
             "--output",
             help="path/to/output file",
             type=Path,
             metavar="<path>",
         )
-        p_manage_shim.add_argument(
-            "-b", "--bin", help="console_script/script to invoke"
-        )
+        p_shim.add_argument("-b", "--bin", help="console_script/script to invoke")
 
         args = parser.parse_args()
 
