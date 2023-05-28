@@ -1094,12 +1094,12 @@ class Viv:
                     + " shouldn't be used with a git-based installation",
                     1,
                 )
-            sha256 = fetch_source(args.reference)
+            sha256 = fetch_source(args.ref)
             sys.path.append(str(c.srccache))
             next_version = __import__(sha256).__version__
 
             if self.local_version == next_version:
-                echo(f"no change between {args.reference} and local version")
+                echo(f"no change between {args.ref} and local version")
                 sys.exit(0)
 
             if confirm(
@@ -1130,7 +1130,7 @@ class Viv:
                 )
                 sys.exit(1)
 
-            sha256 = fetch_source(args.reference)
+            sha256 = fetch_source(args.ref)
             sys.path.append(str(c.srccache))
             downloaded_version = __import__(sha256).__version__
             echo(f"Downloaded version: {downloaded_version}")
