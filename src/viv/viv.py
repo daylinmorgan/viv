@@ -53,7 +53,6 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 __version__ = "23.5a1-dev"
-STABLE = "23.5a1"
 
 
 class Config:
@@ -1329,7 +1328,7 @@ class Viv:
             "-r",
             "--ref",
             help="git reference (branch/tag/commit)",
-            default="main",
+            default="latest",
             metavar="<ref>",
         )
 
