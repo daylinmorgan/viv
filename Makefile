@@ -19,7 +19,7 @@ venv: ## generate environment
 
 # TAPES = demo freeze list-info-remove
 # GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
-# docs: $(GIFS) ## generate usage examples
+# docs: $(GIFS) # generate usage examples
 
 # docs/%.gif: docs/%.tape
 # 	viv rm $$(viv l -q)
