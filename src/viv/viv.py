@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a1-17-gea9a184-dev"
+__version__ = "23.5a1-18-g1a685ea-dev"
 
 
 class Config:
@@ -781,7 +781,7 @@ def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
     return reqs
 
 
-def resolve_deps(args: Namespace):
+def resolve_deps(args: Namespace) -> List[str]:
     spec = combined_spec(args.reqs, args.requirements)
 
     with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
