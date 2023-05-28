@@ -8,7 +8,7 @@
   viv isn't venv
   </p>
 </div>
-<br />
+
 ---
 
 `Viv` is a standalone dependency-free `venv` creator.
@@ -43,19 +43,6 @@ the module just needs to be recognized at run time
 and the single script [`viv.py`](https://github.com/daylinmorgan/viv/blob/main/src/viv/viv.py) can be invoked directly for the CLI.
 How you accomplish these options is ultimately up to you but the above instructions can get you started.
 
-## Additional Features
-
-An experimental feature of `viv` is generating shim's that leverage the principles of `viv`.
-These shims would operate similar to `pipx` in which you can specify a command line app to "install".
-
-*Note* that `--standalone` will auto-generate a code-golfed minified version of `viv` to accomplish the same basic task as using a local copy of `viv`.
-After generating this a standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
-See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
-
-```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) shim black -o ./black --standalone --freeze
-```
-
 ### Pypi (Not Recommended)
 
 ```sh
@@ -84,6 +71,19 @@ To remove `viv` all together you can use the included `purge` command:
 
 ```sh
 python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage purge
+```
+
+## Additional Features
+
+An experimental feature of `viv` is generating shim's that leverage the principles of `viv`.
+These shims would operate similar to `pipx` in which you can specify a command line app to "install".
+
+*Note* that `--standalone` will auto-generate a code-golfed minified version of `viv` to accomplish the same basic task as using a local copy of `viv`.
+After generating this a standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
+See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
+
+```sh
+python3 <(curl -fsSL gh.dayl.in/viv/viv.py) shim black -o ./black --standalone --freeze
 ```
 
 ## Alternatives
