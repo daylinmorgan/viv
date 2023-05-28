@@ -10,9 +10,11 @@ types: ## run mypy
 bump-version: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
 	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
-	@sed -i 's/install -r .*/install -r v$(VERSION)/g' README.md
-	@git add src/viv/viv.py README.md && git commit -m "chore: bump version" --no-verify
+	@git add src/viv/viv.py && git commit -m "chore: bump version" --no-verify
 	@git tag v$(VERSION)
+	@git tag -d latest || true
+	@git tag latest
+
 
 venv: ## generate environment
 	pdm install

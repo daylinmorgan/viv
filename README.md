@@ -31,7 +31,7 @@ In any case they will be re-used across scripts (and generated on-demand, if nee
 Run the below command to install `viv`.
 
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install -r v23.5a1
+python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install
 ```
 
 To access `viv` from within scripts you should add it's location to your `PYTHONPATH`.
@@ -43,7 +43,7 @@ export PYTHONPATH="$PYTHONPATH:$HOME/.local/share/viv"
 
 Advanced users may recognize that principally,
 the module just needs to be recognized at run time
-and the single script at `./src/viv/viv.py` can be invoked directly for the CLI.
+and the single script [`viv.py`](https://github.com/daylinmorgan/viv/blob/main/src/viv/viv.py) can be invoked directly for the CLI.
 How you accomplish these options is ultimately up to you but the above instructions can get you started.
 
 ### Pypi (Not Recommended)
