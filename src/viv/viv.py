@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a1-16-g445a523-dev"
+__version__ = "23.5a1-17-gea9a184-dev"
 
 
 class Config:
@@ -478,7 +478,7 @@ class ArgumentParser(StdArgParser):
 
     def error(self, message: str) -> NoReturn:
         error(message)
-        echo(f"see `{self.prog} --help` for more info\n", style="red")
+        echo(f"see `{self.prog} --help` for more info", style="red")
         sys.exit(2)
 
 
