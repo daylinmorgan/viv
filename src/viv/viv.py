@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a1-18-g1a685ea-dev"
+__version__ = "23.5a2"
 
 
 class Config:
