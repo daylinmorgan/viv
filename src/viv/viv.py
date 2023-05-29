@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4"
+__version__ = "23.5a4-3-g6ddd608-dev"
 
 
 class Config:
@@ -938,12 +938,11 @@ class Viv:
             )
 
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
-        # TODO: improve matching algorithm to favor names over id's
         matches: List[ViVenv] = []
         for k, v in self.vivenvs.items():
             if name_id == k or v.name == name_id:
                 matches.append(v)
-            elif k.startswith(name_id) or v.id.startswith(name_id):
+            elif k.startswith(name_id) or (v.id.startswith(name_id) and v.id == v.name):
                 matches.append(v)
             elif v.name.startswith(name_id):
                 matches.append(v)
