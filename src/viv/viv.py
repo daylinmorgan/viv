@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-2-gebb657c-dev"
+__version__ = "23.5a2-2-g0e40aeb-dev"
 
 
 class Config:
@@ -1239,6 +1239,39 @@ class Viv:
 
             make_executable(output)
 
+    def run(self, args: Namespace) -> None:
+        """\
+        run an app w/ an on-demand venv
+
+        examples:
+          viv r pycowsay -- "Viv isn't venv\!"
+          viv r rich -b python -- -m rich
+        """
+
+        default_bin = re.split(r"[=><~!*]+", args.reqs[0])[0]
+        bin = default_bin if not args.bin else args.bin
+        vivenv = ViVenv(args.reqs)
+
+        if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
+            "VIV_FORCE"
+        ):
+            if not args.keep:
+                with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+                    vivenv.path = Path(tmpdir)
+                    vivenv.create()
+                    vivenv.install_pkgs()
+                    sys.exit(
+                        subprocess.run(
+                            [vivenv.path / "bin" / bin, *args.rest]
+                        ).returncode
+                    )
+            else:
+                vivenv.create()
+                vivenv.install_pkgs()
+                vivenv.dump_info(write=True)
+
+        sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
+
     def _get_subcmd_parser(
         self,
         subparsers: _SubParsersAction[ArgumentParser],
@@ -1408,11 +1441,10 @@ class Viv:
             "purge", help="remove traces of viv", aliases="p", parents=[p_manage_shared]
         ).set_defaults(func=self.manage, cmd="purge")
 
-        (
-            p_shim := self._get_subcmd_parser(
-                subparsers, "shim", parents=[p_freeze_shim_shared]
-            )
-        ).set_defaults(func=self.shim, cmd="shim")
+        p_shim = self._get_subcmd_parser(
+            subparsers, "shim", parents=[p_freeze_shim_shared]
+        )
+
         p_shim.add_argument(
             "-f",
             "--freeze",
@@ -1426,11 +1458,48 @@ class Viv:
             type=Path,
             metavar="<path>",
         )
-        p_shim.add_argument("-b", "--bin", help="console_script/script to invoke")
+        p_shim.add_argument(
+            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
+        )
 
-        args = parser.parse_args()
+        p_run = self._get_subcmd_parser(subparsers, "run")
 
-        args.func(args)
+        p_run.add_argument(
+            "-p",
+            "--path",
+            help="generate line to add viv to sys.path",
+            choices=["abs", "rel"],
+        )
+
+        p_run.add_argument(
+            "-r",
+            "--requirements",
+            help="path/to/requirements.txt file",
+            metavar="<path>",
+        )
+        p_run.add_argument(
+            "-k",
+            "--keep",
+            help="preserve environment",
+            action="store_true",
+        )
+        p_run.add_argument("reqs", help="requirements specifiers", nargs="*")
+
+        p_run.add_argument(
+            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
+        )
+
+        if "--" in sys.argv:
+            i = sys.argv.index("--")
+            args = parser.parse_args(sys.argv[1:i])
+            args.rest = sys.argv[i + 1 :]
+        else:
+            args = parser.parse_args()
+            args.rest = []
+
+        args.func(
+            args,
+        )
 
 
 def main() -> None:
