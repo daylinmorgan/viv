@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-7-g0aff002-dev"
+__version__ = "23.5a2-8-gf5dd514-dev"
 
 
 class Config:
@@ -565,6 +565,7 @@ class ViVenv:
         self.id = id if id else get_hash(spec, track_exe)
         self.name = name if name else self.id
         self.path = path if path else c.venvcache / self.name
+        self.exists = self.name in [d.name for d in c.venvcache.iterdir()]
 
     @classmethod
     def load(cls, name: str) -> "ViVenv":
@@ -584,7 +585,7 @@ class ViVenv:
 
         return vivenv
 
-    def _validate_spec(self, spec: Tuple[str, ...]) -> List[str]:
+    def _validate_spec(self, spec: List[str]) -> List[str]:
         """ensure spec is at least of sequence of strings
 
         Args:
@@ -593,8 +594,8 @@ class ViVenv:
         if not set(map(type, spec)) == {str}:
             error("unexepected input in package spec")
             error(f"check your packages definitions: {spec}", code=1)
-        else:
-            return sorted(spec)
+
+        return sorted(spec)
 
     def create(self, quiet: bool = False) -> None:
         if not quiet:
@@ -651,9 +652,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
     """
     vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
 
-    if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
-        "VIV_FORCE"
-    ):
+    if not vivenv.exists or os.getenv("VIV_FORCE"):
         vivenv.create()
         vivenv.install_pkgs()
         vivenv.dump_info(write=True)
@@ -1049,9 +1048,10 @@ class Viv:
         echo("symlinking cli")
 
         if cli.is_file() and confirm(
-            f"Existing file at {a.style(cli,'bold')}, would you like to overwrite it?"
+            f"Existing file at {a.style(str(cli),'bold')}, "
+            "would you like to overwrite it?"
         ):
-            cli.unlink(src)
+            cli.unlink()
             cli.symlink_to(src)
         else:
             cli.symlink_to(src)
@@ -1181,6 +1181,10 @@ class Viv:
                     "`python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install`"
                 )
 
+    def _pick_bin(self, args: Namespace) -> Tuple[str, str]:
+        default = re.split(r"[=><~!*]+", args.reqs[0])[0]
+        return default, (default if not args.bin else args.bin)
+
     def shim(self, args: Namespace) -> None:
         """\
         generate viv-powered cli apps
@@ -1194,8 +1198,7 @@ class Viv:
         if not args.reqs:
             error("please specify at lease one dependency", code=1)
 
-        default_bin = re.split(r"[=><~!*]+", args.reqs[0])[0]
-        bin = default_bin if not args.bin else args.bin
+        default_bin, bin = self._pick_bin(args)
         output = (
             c.binparent / default_bin if not args.output else args.output.absolute()
         )
@@ -1253,14 +1256,15 @@ class Viv:
         if not args.reqs:
             error("please specify at lease one dependency", code=1)
 
-        default_bin = re.split(r"[=><~!*]+", args.reqs[0])[0]
-        bin = default_bin if not args.bin else args.bin
+        _, bin = self._pick_bin(args)
         spec = combined_spec(args.reqs, args.requirements)
         vivenv = ViVenv(spec)
 
-        if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
-            "VIV_FORCE"
-        ):
+        # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
+        # ephemeral (default), semi-ephemeral (persist inside /tmp), or
+        # persist (use c.cache)
+
+        if not vivenv.exists or os.getenv("VIV_FORCE"):
             if not args.keep:
                 with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                     vivenv.path = Path(tmpdir)
