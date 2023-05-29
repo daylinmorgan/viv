@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a3"
+__version__ = "23.5a2-2-gebb657c-dev"
 
 
 class Config:
@@ -559,7 +559,7 @@ class ViVenv:
         name: str = "",
         path: Path | None = None,
     ) -> None:
-        self.spec = spec
+        self.spec = self._validate_spec(spec)
         self.exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
         self.id = id if id else get_hash(spec, track_exe)
         self.name = name if name else self.id
@@ -582,6 +582,18 @@ class ViVenv:
         vivenv.exe = venvconfig["exe"]
 
         return vivenv
+
+    def _validate_spec(self, spec: Tuple[str, ...]) -> List[str]:
+        """ensure spec is at least of sequence of strings
+
+        Args:
+            spec: sequence of package specifications
+        """
+        if not set(map(type, spec)) == {str}:
+            error("unexepected input in package spec")
+            error(f"check your packages definitions: {spec}", code=1)
+        else:
+            return sorted(spec)
 
     def create(self, quiet: bool = False) -> None:
         if not quiet:
@@ -636,7 +648,6 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
         track_exe: if true make env python exe specific
         name: use as vivenv name, if not provided id is used
     """
-    validate_spec(packages)
     vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
 
     if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
@@ -648,18 +659,6 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
 
     modify_sys_path(vivenv.path)
     return vivenv.path
-
-
-def validate_spec(spec: Tuple[str, ...]) -> None:
-    """ensure spec is at least of sequence of strings
-
-    Args:
-        spec: sequence of package specifications
-    """
-    # ? make this a part of ViVenv?
-    if not set(map(type, spec)) == {str}:
-        error("unexepected input in package spec")
-        error(f"check your packages definitions: {spec}", code=1)
 
 
 def modify_sys_path(new_path: Path) -> None:
