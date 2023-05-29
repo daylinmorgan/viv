@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-3-g6ddd608-dev"
+__version__ = "23.5a4-4-g158acbc-dev"
 
 
 class Config:
@@ -1011,7 +1011,7 @@ class Viv:
             a.table(rows)
 
     def exe(self, args: Namespace) -> None:
-        """run python/pip in vivenv"""
+        """run python/pip in existing vivenv"""
 
         vivenv = self._match_vivenv(args.vivenv)
 
@@ -1246,7 +1246,7 @@ class Viv:
 
     def run(self, args: Namespace) -> None:
         """\
-        run an app w/ an on-demand venv
+        run an app with an on-demand venv
 
         examples:
           viv r pycowsay -- "Viv isn't venv\!"
