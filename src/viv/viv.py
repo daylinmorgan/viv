@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-2-g0e40aeb-dev"
+__version__ = "23.5a2-4-gfba2231-dev"
 
 
 class Config:
@@ -1247,10 +1247,13 @@ class Viv:
           viv r pycowsay -- "Viv isn't venv\!"
           viv r rich -b python -- -m rich
         """
+        if not args.reqs:
+            error("please specify at lease one dependency", code=1)
 
         default_bin = re.split(r"[=><~!*]+", args.reqs[0])[0]
         bin = default_bin if not args.bin else args.bin
-        vivenv = ViVenv(args.reqs)
+        spec = combined_spec(args.reqs, args.requirements)
+        vivenv = ViVenv(spec)
 
         if vivenv.name not in [d.name for d in c.venvcache.iterdir()] or os.getenv(
             "VIV_FORCE"
@@ -1463,13 +1466,6 @@ class Viv:
         )
 
         p_run = self._get_subcmd_parser(subparsers, "run")
-
-        p_run.add_argument(
-            "-p",
-            "--path",
-            help="generate line to add viv to sys.path",
-            choices=["abs", "rel"],
-        )
 
         p_run.add_argument(
             "-r",
