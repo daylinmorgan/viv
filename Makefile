@@ -7,7 +7,7 @@ lint: ## run pre-commit hooks
 types: ## run mypy
 	mypy src/viv
 
-bump: check-version ## update version and tag commit
+bump: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
 	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
 	@git add src/viv/viv.py && git commit -m "chore: bump version" --no-verify
@@ -17,14 +17,6 @@ bump: check-version ## update version and tag commit
 
 venv: ## generate environment
 	pdm install
-
-# TAPES = demo freeze list-info-remove
-# GIFS := $(foreach n, $(TAPES), docs/$(n).gif)
-# docs: $(GIFS) # generate usage examples
-
-# docs/%.gif: docs/%.tape
-# 	viv rm $$(viv l -q)
-# 	cd docs; vhs < $*.tape
 
 clean: ## remove build artifacts
 	rm -rf {build,dist}
