@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-4-gfba2231-dev"
+__version__ = "23.5a2-4-gc960808-dev"
 
 
 class Config:
@@ -226,7 +226,8 @@ class Ansi:
         Args:
             output: text output from subprocess, usually from p.stdout
         """
-
+        if not output:
+            return
         echo("subprocess output:")
         new_output = [f"{self.red}->{self.end} {line}" for line in output.splitlines()]
         sys.stdout.write("\n".join(new_output) + "\n")
@@ -1024,7 +1025,7 @@ class Viv:
             f"{pip_path} {' '.join(args.cmd)}"
             if args.exe == "pip"
             else f"{python_path} {' '.join(args.cmd)}"
-        )
+        ) + " ".join(args.rest)
 
         echo(f"executing {cmd}")
         run(shlex.split(cmd), verbose=True)
