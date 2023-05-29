@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-6-gd3f4bf9-dev"
+__version__ = "23.5a2-7-g0aff002-dev"
 
 
 class Config:
@@ -1049,7 +1049,7 @@ class Viv:
         echo("symlinking cli")
 
         if cli.is_file() and confirm(
-            f"Existing file at {cli}, would you like to overwrite it?"
+            f"Existing file at {a.style(cli,'bold')}, would you like to overwrite it?"
         ):
             cli.unlink(src)
             cli.symlink_to(src)
