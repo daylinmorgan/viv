@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-4-gc960808-dev"
+__version__ = "23.5a2-5-g4e6acac-dev"
 
 
 class Config:
@@ -1057,7 +1057,7 @@ class Viv:
         echo("Remember to include the following line in your shell rc file:")
         sys.stderr.write(
             '  export PYTHONPATH="$PYTHONPATH:$HOME/'
-            f'{src.relative_to(Path.home())}"\n'
+            f'{src.relative_to(Path.home()).parent}"\n'
         )
 
     def manage(self, args: Namespace) -> None:
