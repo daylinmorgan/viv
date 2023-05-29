@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a2-5-g4e6acac-dev"
+__version__ = "23.5a2-6-gd3f4bf9-dev"
 
 
 class Config:
@@ -1048,10 +1048,12 @@ class Viv:
         make_executable(src)
         echo("symlinking cli")
 
-        if not cli.is_file():
+        if cli.is_file() and confirm(
+            f"Existing file at {cli}, would you like to overwrite it?"
+        ):
+            cli.unlink(src)
             cli.symlink_to(src)
         else:
-            cli.unlink()
             cli.symlink_to(src)
 
         echo("Remember to include the following line in your shell rc file:")
