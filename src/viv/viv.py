@@ -339,28 +339,26 @@ to create/activate a vivenv:
 - from command line: `{a.style("viv -h","bold")}`
 - within python script: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
-
-    _standalone_func = r"""def _viv_use(*pkgs, track_exe=False, name=""):
-    T,F=True,False;i,s,m,e,spec=__import__,str,map,lambda x: T if x else F,[*pkgs]
+    _standalone_func = """def _viv_use(*pkgs, track_exe=False, name=""):
+    T,F,N=True,False,None;i,s,m,spec=__import__,str,map,[*pkgs]
+    e,w=lambda x: T if x else F,lambda p,t: p.write_text(t)
     if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")
     ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
     (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=T,exist_ok=T)
     ((sha256:=i("hashlib").sha256()).update((s(spec)+
     (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))
-    if ((env:=cache/(name if name else (_id:=sha256.hexdigest())))
-        not in cache.glob("*/")) or ge("VIV_FORCE"):
+    if {env:=cache/(((_id:=sha256.hexdigest()),name)[e(name)])}-{*cache.glob("*/")} or ge("VIV_FORCE"):
         v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {env.name}\n")
         i("venv").EnvBuilder(with_pip=T,clear=T).create(env)
-        with (env/"pip.conf").open("w") as f:f.write("[global]\ndisable-pip-version-check=true")
-        if (p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=True,
-            stdout=(-1,None)[v],stderr=(-2,None)[v])).returncode!=0:
+        w(env/"pip.conf","[global]\ndisable-pip-version-check=true")
+        if (rc:=(p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=T,
+            stdout=(-1,N)[v],stderr=(-2,N)[v])).returncode)!=0:
             if env.is_dir():i("shutil").rmtree(env)
-            ew(f"pip had non zero exit ({p.returncode})\n{p.stdout}\n");sys.exit(p.returncode)
-        with (env/"viv-info.json").open("w") as f:
-            i("json").dump({"created":s(i("datetime").datetime.today()),
-            "id":_id,"spec":spec,"exe":exe},f)
-    sys.path = [p for p in (*sys.path,s(*(env/"lib").glob("py*/si*"))) if p!=i("site").USER_SITE]
-    return env"""  # noqa
+            ew(f"pip had non zero exit ({rc})\n{p.stdout}\n");sys.exit(rc)
+        w(env/"viv-info.json",i("json").dumps(
+            {"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}))
+    sys.path=[p for p in (*sys.path,s(*(env/"lib").glob("py*/si*")))if p!=i("site").USER_SITE]
+    return env""" # noqa
 
     def noqa(self, txt: str) -> str:
         max_length = max(map(len, txt.splitlines()))
@@ -371,7 +369,7 @@ to create/activate a vivenv:
         if standalone:
             return f"""_viv_use({fill(spec_str,width=90,subsequent_indent="    ",)})"""
         else:
-            return f"""__import("viv").use({spec_str})"""
+            return f"""__import__("viv").use({spec_str})"""
 
     def standalone(self, spec: List[str]) -> str:
         func_use = self.noqa(
