@@ -1,32 +1,36 @@
 #!/usr/bin/env python3
-def _viv_use(*pkgs, track_exe=False, name=""):
-    T,F,N=True,False,None;i,s,m,spec=__import__,str,map,[*pkgs]
-    e,w=lambda x: T if x else F,lambda p,t: p.write_text(t)
-    if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")
-    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write
-    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=T,exist_ok=T)
-    ((sha256:=i("hashlib").sha256()).update((s(spec)+
-    (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))
-    if {env:=cache/(((_id:=sha256.hexdigest()),name)[e(name)])}-{*cache.glob("*/")} or ge("VIV_FORCE"):
-        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {env.name}
-")
-        i("venv").EnvBuilder(with_pip=T,clear=T).create(env)
-        w(env/"pip.conf","[global]
-disable-pip-version-check=true")
-        if (rc:=(p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=T,
-            stdout=(-1,N)[v],stderr=(-2,N)[v])).returncode)!=0:
-            if env.is_dir():i("shutil").rmtree(env)
-            ew(f"pip had non zero exit ({rc})
-{p.stdout}
-");sys.exit(rc)
-        w(env/"viv-info.json",i("json").dumps(
-            {"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}))
-    sys.path=[p for p in (*sys.path,s(*(env/"lib").glob("py*/si*")))if p!=i("site").USER_SITE]
-    return env
+# fmt: off
+def _viv_use(*pkgs, track_exe=False, name=""):                                                          # noqa
+    T,F,N=True,False,None;i,s,m,spec=__import__,str,map,[*pkgs]                                         # noqa
+    e,w=lambda x: T if x else F,lambda p,t: p.write_text(t)                                             # noqa
+    if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")                           # noqa
+    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write                         # noqa
+    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=T,exist_ok=T)      # noqa
+    ((sha256:=i("hashlib").sha256()).update((s(spec)+                                                   # noqa
+    (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))                    # noqa
+    if {env:=cache/(((_id:=sha256.hexdigest()),name)[e(name)])}-{*cache.glob("*/")} or ge("VIV_FORCE"): # noqa
+        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {env.name}\n")                             # noqa
+        i("venv").EnvBuilder(with_pip=T,clear=T).create(env)                                            # noqa
+        w(env/"pip.conf","[global]\ndisable-pip-version-check=true")                                    # noqa
+        if (rc:=(p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=T,   # noqa
+            stdout=(-1,N)[v],stderr=(-2,N)[v])).returncode)!=0:                                         # noqa
+            if env.is_dir():i("shutil").rmtree(env)                                                     # noqa
+            ew(f"pip had non zero exit ({rc})\n{p.stdout}\n");sys.exit(rc)                              # noqa
+        w(env/"viv-info.json",i("json").dumps(                                                          # noqa
+            {"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}))              # noqa
+    sys.path=[p for p in (*sys.path,s(*(env/"lib").glob("py*/si*")))if p!=i("site").USER_SITE]          # noqa
+    return env                                                                                          # noqa
+# fmt: on
 import subprocess
 import sys
 
 if __name__ == "__main__":
-    vivenv = _viv_use("black==23.3.0", "click==8.1.3", "mypy-extensions==1.0.0", "packaging==23.1",
-    "pathspec==0.11.1", "platformdirs==3.5.1")
+    vivenv = _viv_use(
+        "black==23.3.0",
+        "click==8.1.3",
+        "mypy-extensions==1.0.0",
+        "packaging==23.1",  # noqa
+        "pathspec==0.11.1",
+        "platformdirs==3.5.1",
+    )  # noqa
     sys.exit(subprocess.run([vivenv / "bin" / "black", *sys.argv[1:]]).returncode)

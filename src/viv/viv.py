@@ -51,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-12-g138809e-dev"
+__version__ = "23.5a4-13-ga6bd81d-dev"
 
 
 class Config:
@@ -339,7 +339,7 @@ to create/activate a vivenv:
 - from command line: `{a.style("viv -h","bold")}`
 - within python script: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
-    _standalone_func = """def _viv_use(*pkgs, track_exe=False, name=""):
+    _standalone_func = r"""def _viv_use(*pkgs, track_exe=False, name=""):
     T,F,N=True,False,None;i,s,m,spec=__import__,str,map,[*pkgs]
     e,w=lambda x: T if x else F,lambda p,t: p.write_text(t)
     if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")
@@ -426,7 +426,9 @@ to create/activate a vivenv:
         bin: str,
     ) -> str:
         if standalone:
-            imports = self._standalone_func
+            imports = "\n".join(
+                ("# fmt: off", self.noqa(self._standalone_func), "# fmt: on")
+            )
         elif path == "abs":
             imports = self._absolute_import(local_source)
         elif path == "rel":
@@ -440,7 +442,7 @@ import subprocess
 import sys
 
 if __name__ == "__main__":
-    vivenv = {self._use_str(spec, standalone)}
+    vivenv = {self.noqa(self._use_str(spec, standalone))}
     sys.exit(subprocess.run([vivenv / "bin" / "{bin}", *sys.argv[1:]]).returncode)
 """
 
