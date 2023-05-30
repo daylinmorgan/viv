@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Viv isn't venv!
+"""viv isn't venv!
 
   viv -h
     OR
@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-4-g158acbc-dev"
+__version__ = "23.5a4-5-g819257c-dev"
 
 
 class Config:
@@ -216,7 +216,7 @@ class Ansi:
         return " ".join(
             (
                 self.style(f, "magenta") + self.style(rest, "cyan")
-                for f, rest in (("V", "iv"), ("i", "sn't"), ("v", "env!"))
+                for f, rest in (("v", "iv"), ("i", "sn't"), ("v", "env!"))
             )
         )
 
@@ -260,7 +260,7 @@ class Ansi:
             return (row,)
 
     def viv_preamble(self, style: str = "magenta", sep: str = "::") -> str:
-        return f"{self.cyan}Viv{self.end}{self.__dict__[style]}{sep}{self.end}"
+        return f"{self.cyan}viv{self.end}{self.__dict__[style]}{sep}{self.end}"
 
     def table(
         self, rows: Tuple[Tuple[str, Sequence[str]], ...], header_style: str = "cyan"
@@ -1249,7 +1249,7 @@ class Viv:
         run an app with an on-demand venv
 
         examples:
-          viv r pycowsay -- "Viv isn't venv\!"
+          viv r pycowsay -- "viv isn't venv\!"
           viv r rich -b python -- -m rich
         """
         if not args.reqs:

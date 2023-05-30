@@ -11,7 +11,7 @@
 
 Try before you buy!
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) run pycowsay -- "Viv isn't venv\!"
+python3 <(curl -fsSL gh.dayl.in/viv/viv.py) run pycowsay -- "viv isn't venv\!"
 ```
 ---
 
