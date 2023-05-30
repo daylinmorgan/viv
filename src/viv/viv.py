@@ -51,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-7-g8a5f63d-dev"
+__version__ = "23.5a4-9-g0a12065-dev"
 
 
 class Config:
@@ -367,11 +367,11 @@ to create/activate a vivenv:
         return "\n".join((f"{line:{max_length}} # noqa" for line in txt.splitlines()))
 
     def _use_str(self, spec: List[str], standalone: bool = False) -> str:
-        spec = ", ".join(f'"{req}"' for req in spec)
+        spec_str = ", ".join(f'"{req}"' for req in spec)
         if standalone:
-            return f"""_viv_use({fill(spec,width=90,subsequent_indent="    ",)})"""
+            return f"""_viv_use({fill(spec_str,width=90,subsequent_indent="    ",)})"""
         else:
-            return f"""__import("viv").use({spec})"""
+            return f"""__import("viv").use({spec_str})"""
 
     def standalone(self, spec: List[str]) -> str:
         func_use = self.noqa(
@@ -386,7 +386,10 @@ to create/activate a vivenv:
 # >>>>> code golfed with <3
 """
 
-    def _rel_import(self, local_source: Path):
+    def _rel_import(self, local_source: Optional[Path]) -> str:
+        if not local_source:
+            raise ValueError("local source must exist")
+
         path_to_viv = path_to_viv = str(
             local_source.resolve().absolute().parent.parent
         ).replace(str(Path.home()), "~")
@@ -395,11 +398,16 @@ to create/activate a vivenv:
             f""".path.expanduser("{path_to_viv}"))  # noqa"""
         )
 
-    def _absolute_import(self, local_source: Path):
+    def _absolute_import(self, local_source: Optional[Path]) -> str:
+        if not local_source:
+            raise ValueError("local source must exist")
+
         path_to_viv = local_source.resolve().absolute().parent.parent
         return f"""__import__("sys").path.append("{path_to_viv}")  # noqa"""
 
-    def frozen_import(self, path: str, local_source: Path, spec: List[str]) -> str:
+    def frozen_import(
+        self, path: str, local_source: Optional[Path], spec: List[str]
+    ) -> str:
         if path == "abs":
             imports = self._absolute_import(local_source)
         elif path == "rel":
@@ -412,7 +420,12 @@ to create/activate a vivenv:
 """
 
     def shim(
-        self, path: str, local_source: Path, standalone: bool, spec: List[str], bin: str
+        self,
+        path: str,
+        local_source: Optional[Path],
+        standalone: bool,
+        spec: List[str],
+        bin: str,
     ) -> str:
         if standalone:
             imports = self._standalone_func
@@ -433,7 +446,9 @@ if __name__ == "__main__":
     sys.exit(subprocess.run([vivenv / "bin" / "{bin}", *sys.argv[1:]]).returncode)
 """
 
-    def update(self, src, cli, local_version, next_version):
+    def update(
+        self, src: Optional[Path], cli: Path, local_version: str, next_version: str
+    ) -> str:
         return f"""
   Update source at {a.green}{src}{a.end}
   Symlink {a.bold}{src}{a.end} to {a.bold}{cli}{a.end}
@@ -441,14 +456,16 @@ if __name__ == "__main__":
 
 """
 
-    def install(self, src, cli):
+    def install(self, src: Path, cli: Path) -> str:
         return f"""
   Install viv.py to {a.green}{src}{a.end}
   Symlink {a.bold}{src}{a.end} to {a.bold}{cli}{a.end}
 
 """
 
-    def show(self, cli, running, local):
+    def show(
+        self, cli: Optional[Path | str], running: Path, local: Optional[Path | str]
+    ) -> str:
         return (
             "\n".join(
                 f"  {a.bold}{k}{a.end}: {v}"
