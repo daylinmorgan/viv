@@ -31,7 +31,6 @@ from argparse import (
     _SubParsersAction,
 )
 from argparse import ArgumentParser as StdArgParser
-from dataclasses import dataclass
 from datetime import datetime
 from itertools import zip_longest
 from pathlib import Path
@@ -52,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-5-g819257c-dev"
+__version__ = "23.5a4-6-g27d7952-dev"
 
 
 class Config:
@@ -158,26 +157,25 @@ BOX: Dict[str, str] = {
 }
 
 
-@dataclass
 class Ansi:
     """control ouptut of ansi(VT100) control codes"""
 
-    bold: str = "\033[1m"
-    dim: str = "\033[2m"
-    underline: str = "\033[4m"
-    red: str = "\033[1;31m"
-    green: str = "\033[1;32m"
-    yellow: str = "\033[1;33m"
-    magenta: str = "\033[1;35m"
-    cyan: str = "\033[1;36m"
-    end: str = "\033[0m"
+    def __init__(self) -> None:
+        self.bold: str = "\033[1m"
+        self.dim: str = "\033[2m"
+        self.underline: str = "\033[4m"
+        self.red: str = "\033[1;31m"
+        self.green: str = "\033[1;32m"
+        self.yellow: str = "\033[1;33m"
+        self.magenta: str = "\033[1;35m"
+        self.cyan: str = "\033[1;36m"
+        self.end: str = "\033[0m"
 
-    # for argparse help
-    header: str = cyan
-    option: str = yellow
-    metavar: str = "\033[33m"  # normal yellow
+        # for argparse help
+        self.header: str = self.cyan
+        self.option: str = self.yellow
+        self.metavar: str = "\033[33m"  # normal yellow
 
-    def __post_init__(self) -> None:
         if os.getenv("NO_COLOR") or not sys.stderr.isatty():
             for attr in self.__dict__:
                 setattr(self, attr, "")
