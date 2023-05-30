@@ -18,6 +18,10 @@ bump: ## update version and tag commit
 venv: ## generate environment
 	pdm install
 
+.PHONY: dev-install
+dev-install:
+	cp ./src/viv/viv.py ~/.local/share/viv/viv.py
+
 clean: ## remove build artifacts
 	rm -rf {build,dist}
 
