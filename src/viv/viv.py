@@ -51,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-9-g0a12065-dev"
+__version__ = "23.5a4-12-g138809e-dev"
 
 
 class Config:
@@ -358,7 +358,7 @@ to create/activate a vivenv:
         w(env/"viv-info.json",i("json").dumps(
             {"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}))
     sys.path=[p for p in (*sys.path,s(*(env/"lib").glob("py*/si*")))if p!=i("site").USER_SITE]
-    return env""" # noqa
+    return env"""  # noqa
 
     def noqa(self, txt: str) -> str:
         max_length = max(map(len, txt.splitlines()))
@@ -947,14 +947,6 @@ class Viv:
         else:
             self.git = False
 
-    def _check_local_source(self, args: Namespace) -> None:
-        if not self.local_source and not (args.standalone or args.path):
-            warn(
-                "failed to find local copy of `viv` "
-                "make sure to add it to your PYTHONPATH "
-                "or consider using --path/--standalone"
-            )
-
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
         matches: List[ViVenv] = []
         for k, v in self.vivenvs.items():
@@ -994,13 +986,6 @@ class Viv:
 
     def freeze(self, args: Namespace) -> None:
         """create import statement from package spec"""
-
-        self._check_local_source(args)
-
-        if not args.reqs:
-            error("must specify a requirement", code=1)
-        if args.path and args.standalone:
-            error("-p/--path and -s/--standalone are mutually exclusive", code=1)
 
         spec = resolve_deps(args)
         if args.keep:
@@ -1099,6 +1084,10 @@ class Viv:
             f'{src.relative_to(Path.home()).parent}"\n'
         )
 
+    def _get_new_version(self, ref: str) -> Tuple[str, str]:
+        sys.path.append(str(c.srccache))
+        return (sha256 := fetch_source(ref)), __import__(sha256).__version__
+
     def manage(self, args: Namespace) -> None:
         """manage viv itself"""
 
@@ -1119,22 +1108,7 @@ class Viv:
                 )
 
         elif args.cmd == "update":
-            if not self.local_source:
-                error(
-                    a.style("viv manage update", "bold")
-                    + " should be used with an exisiting installation",
-                    1,
-                )
-
-            if self.git:
-                error(
-                    a.style("viv manage update", "bold")
-                    + " shouldn't be used with a git-based installation",
-                    1,
-                )
-            sha256 = fetch_source(args.ref)
-            sys.path.append(str(c.srccache))
-            next_version = __import__(sha256).__version__
+            sha256, next_version = self._get_new_version(args.ref)
 
             if self.local_version == next_version:
                 echo(f"no change between {args.ref} and local version")
@@ -1153,19 +1127,8 @@ class Viv:
                 )
 
         elif args.cmd == "install":
-            if self.local_source:
-                error(f"found existing viv installation at {self.local_source}")
-                echo(
-                    "use "
-                    + a.style("viv manage update", "bold")
-                    + " to modify current installation.",
-                    style="red",
-                )
-                sys.exit(1)
+            sha256, downloaded_version = self._get_new_version(args.ref)
 
-            sha256 = fetch_source(args.ref)
-            sys.path.append(str(c.srccache))
-            downloaded_version = __import__(sha256).__version__
             echo(f"Downloaded version: {downloaded_version}")
 
             # TODO: see if file is actually where
@@ -1176,6 +1139,7 @@ class Viv:
                 t.install(args.src, args.cli),
             ):
                 self._install_local_src(sha256, args.src, args.cli)
+
         elif args.cmd == "purge":
             to_remove = []
             if c._cache.is_dir():
@@ -1221,11 +1185,6 @@ class Viv:
           viv shim black
           viv shim yartsu -o ~/bin/yartsu --standalone
         """
-        self._check_local_source(args)
-
-        if not args.reqs:
-            error("please specify at lease one dependency", code=1)
-
         default_bin, bin = self._pick_bin(args)
         output = (
             c.binparent / default_bin if not args.output else args.output.absolute()
@@ -1238,9 +1197,6 @@ class Viv:
             spec = resolve_deps(args)
         else:
             spec = combined_spec(args.reqs, args.requirements)
-
-        if args.path and not self.local_source:
-            error("No local viv found to import from", code=1)
 
         if confirm(
             f"Write shim for {a.style(bin,'bold')} to {a.style(output,'green')}?"
@@ -1260,8 +1216,6 @@ class Viv:
           viv r pycowsay -- "viv isn't venv\!"
           viv r rich -b python -- -m rich
         """
-        if not args.reqs:
-            error("please specify at lease one dependency", code=1)
 
         _, bin = self._pick_bin(args)
         spec = combined_spec(args.reqs, args.requirements)
@@ -1308,6 +1262,49 @@ class Viv:
         parser.set_defaults(func=cmd)
 
         return parser
+
+    def _validate_args(self, args):
+        if args.func.__name__ in ("freeze", "shim", "run"):
+            if not args.reqs:
+                error("must specify a requirement", code=1)
+        if args.func.__name__ in ("freeze", "shim"):
+            if not self.local_source and not (args.standalone or args.path):
+                warn(
+                    "failed to find local copy of `viv` "
+                    "make sure to add it to your PYTHONPATH "
+                    "or consider using --path/--standalone"
+                )
+
+            if args.path and not self.local_source:
+                error("No local viv found to import from", code=1)
+
+            if args.path and args.standalone:
+                error("-p/--path and -s/--standalone are mutually exclusive", code=1)
+
+        if args.func.__name__ == "manage":
+            if args.cmd == "install" and self.local_source:
+                error(f"found existing viv installation at {self.local_source}")
+                echo(
+                    "use "
+                    + a.style("viv manage update", "bold")
+                    + " to modify current installation.",
+                    style="red",
+                )
+                sys.exit(1)
+            if args.cmd == "update":
+                if not self.local_source:
+                    error(
+                        a.style("viv manage update", "bold")
+                        + " should be used with an exisiting installation",
+                        1,
+                    )
+
+                if self.git:
+                    error(
+                        a.style("viv manage update", "bold")
+                        + " shouldn't be used with a git-based installation",
+                        1,
+                    )
 
     def cli(self) -> None:
         """cli entrypoint"""
@@ -1507,6 +1504,7 @@ class Viv:
             args = parser.parse_args()
             args.rest = []
 
+        self._validate_args(args)
         args.func(
             args,
         )
