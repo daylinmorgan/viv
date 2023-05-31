@@ -835,14 +835,8 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
 
 
 def modify_sys_path(new_path: Path) -> None:
-    # remove user-site
-    for i, path in enumerate(sys.path):
-        if path == site.USER_SITE:
-            sys.path.pop(i)
-
-    sys.path.append(
-        str([p for p in (new_path / "lib").glob("python*/site-packages")][0])
-    )
+    sys.path = [p for p in sys.path if p is not site.USER_SITE]
+    site.addsitedir([*(new_path / "lib").glob("python*/site-packages")][0])
 
 
 def get_venvs() -> Dict[str, ViVenv]:
