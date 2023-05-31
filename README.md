@@ -11,7 +11,7 @@
 
 Try before you buy!
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) run pycowsay -- "viv isn't venv\!"
+python3 <(curl -fsSL viv.dayl.in/viv.py) run pycowsay -- "viv isn't venv\!"
 ```
 ---
 
@@ -32,7 +32,7 @@ For that reason any usage of the `CLI` can be accomplished using a remote copy a
 Run the below command to install `viv`.
 
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage install
+python3 <(curl -fsSL viv.dayl.in/viv.py) manage install
 ```
 
 To access `viv` from within scripts you should add it's location to your `PYTHONPATH`.
@@ -74,7 +74,7 @@ viv remove $(viv list -q)
 To remove `viv` all together you can use the included `purge` command:
 
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) manage purge
+python3 <(curl -fsSL viv.dayl.in/viv.py) manage purge
 ```
 
 ## Additional Features
@@ -87,7 +87,7 @@ After generating this a standalone `shim` you can freely use this script across 
 See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
 
 ```sh
-python3 <(curl -fsSL gh.dayl.in/viv/viv.py) shim black -o ./black --standalone --freeze
+python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --freeze
 ```
 
 ## Alternatives
