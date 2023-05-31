@@ -1063,12 +1063,11 @@ class Viv:
         make_executable(src)
         echo("symlinking cli")
 
-        if cli.is_file() and confirm(
-            f"Existing file at {a.style(str(cli),'bold')}, "
-            "would you like to overwrite it?"
-        ):
-            cli.unlink()
-            cli.symlink_to(src)
+        if cli.is_file():
+            echo(f"Existing file at {a.style(str(cli),'bold')}")
+            if confirm("Would you like to overwrite it?"):
+                cli.unlink()
+                cli.symlink_to(src)
         else:
             cli.symlink_to(src)
 
