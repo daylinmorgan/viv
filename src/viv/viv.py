@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-21-gf5c91fe-dev"
+__version__ = "23.5a4-23-gf0e18ac-dev"
 
 
 class Config:
@@ -748,15 +748,15 @@ class ViVenv:
 
     def show(self) -> None:
         _id = (
-                self.meta.id[:8]
-                if self.meta.id == self.name
-                else (self.name[:5] + "..." if len(self.name) > 8 else self.name)
-            )
+            self.meta.id[:8]
+            if self.meta.id == self.name
+            else (self.name[:5] + "..." if len(self.name) > 8 else self.name)
+        )
 
         sys.stdout.write(
-                f"""{a.bold}{a.cyan}{_id}{a.end} """
-                f"""{a.style(", ".join(self.meta.spec),'dim')}\n"""
-            )
+            f"""{a.bold}{a.cyan}{_id}{a.end} """
+            f"""{a.style(", ".join(self.meta.spec),'dim')}\n"""
+        )
 
     def _tree_leaves(self, items: List[str], indent: str = "") -> str:
         tree_chars = ["├"] * (len(items) - 1) + ["╰"]
@@ -1000,7 +1000,9 @@ class Viv:
             for _, vivenv in self.vivenvs.items():
                 vivenv.tree()
         elif args.json:
-            sys.stdout.write(json.dumps({k:v.meta.__dict__ for k,v in self.vivenvs.items()}))
+            sys.stdout.write(
+                json.dumps({k: v.meta.__dict__ for k, v in self.vivenvs.items()})
+            )
         else:
             for _, vivenv in self.vivenvs.items():
                 vivenv.show()
