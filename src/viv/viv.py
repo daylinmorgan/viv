@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-25-g3b74384-dev"
+__version__ = "23.5a4-26-g35bffae-dev"
 
 
 class Config:
@@ -1039,7 +1039,7 @@ class Viv:
         if not metadata_file.is_file():
             error(f"Unable to find metadata for vivenv: {args.vivenv}", code=1)
 
-        vivenv.show(verbose=True)
+        vivenv.tree()
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path) -> None:
         echo("updating local source copy of viv")
