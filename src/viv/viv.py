@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-23-gf0e18ac-dev"
+__version__ = "23.5a4-25-g3b74384-dev"
 
 
 class Config:
@@ -746,6 +746,9 @@ class ViVenv:
             verbose=bool(os.getenv("VIV_VERBOSE")),
         )
 
+    def touch(self) -> None:
+        self.meta.accessed = str(datetime.today())
+
     def show(self) -> None:
         _id = (
             self.meta.id[:8]
@@ -977,6 +980,9 @@ class Viv:
                 vivenv.meta.write()
             else:
                 echo("re-using existing vivenv")
+
+            vivenv.touch()
+            vivenv.meta.write()
 
         echo("see below for import statements\n")
 
@@ -1210,7 +1216,9 @@ class Viv:
             else:
                 vivenv.create()
                 vivenv.install_pkgs()
-                vivenv.meta.write()
+
+        vivenv.touch()
+        vivenv.meta.write()
 
         sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
 
