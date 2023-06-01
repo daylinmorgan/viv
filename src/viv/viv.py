@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-27-g1c2e5a8-dev"
+__version__ = "23.5a4-29-g0ccf72c-dev"
 
 
 class Config:
@@ -1024,7 +1024,7 @@ class Viv:
 
         cmd = (
             f"{pip_path} {' '.join(args.cmd)}"
-            if args.exe == "pip"
+            if args.subcmd == "pip"
             else f"{python_path} {' '.join(args.cmd)}"
         ) + " ".join(args.rest)
 
@@ -1070,7 +1070,7 @@ class Viv:
     def manage(self, args: Namespace) -> None:
         """manage viv itself"""
 
-        if args.cmd == "show":
+        if args.subcmd == "show":
             if args.pythonpath:
                 if self.local and self.local_source:
                     sys.stdout.write(str(self.local_source.parent) + "\n")
@@ -1086,7 +1086,7 @@ class Viv:
                     )
                 )
 
-        elif args.cmd == "update":
+        elif args.subcmd == "update":
             sha256, next_version = self._get_new_version(args.ref)
 
             if self.local_version == next_version:
@@ -1105,7 +1105,7 @@ class Viv:
                     args.cli,
                 )
 
-        elif args.cmd == "install":
+        elif args.subcmd == "install":
             sha256, downloaded_version = self._get_new_version(args.ref)
 
             echo(f"Downloaded version: {downloaded_version}")
@@ -1119,7 +1119,7 @@ class Viv:
             ):
                 self._install_local_src(sha256, args.src, args.cli)
 
-        elif args.cmd == "purge":
+        elif args.subcmd == "purge":
             to_remove = []
             if c._cache.is_dir():
                 to_remove.append(c._cache)
@@ -1224,6 +1224,217 @@ class Viv:
 
         sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
 
+
+class Arg:
+    def __init__(self, *args: str, **kwargs: Any) -> None:
+        self.args = args
+        self.kwargs = kwargs
+
+
+class Cli:
+    args = {
+        "list": [
+            Arg(
+                "-f",
+                "--full",
+                help="show full metadata for vivenvs",
+                action="store_true",
+            ),
+            Arg(
+                "-q",
+                "--quiet",
+                help="suppress non-essential output",
+                action="store_true",
+            ),
+        ],
+        "shim": [
+            Arg(
+                "-f",
+                "--freeze",
+                help="freeze/resolve all dependencies",
+                action="store_true",
+            ),
+            Arg(
+                "-o",
+                "--output",
+                help="path/to/output file",
+                type=Path,
+                metavar="<path>",
+            ),
+        ],
+        "remove": [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
+        ("exe|pip", "exe|python"): [Arg("vivenv", help="name/hash of vivenv")],
+        ("list", "info"): [
+            Arg(
+                "--json",
+                help="name:metadata json for vivenvs ",
+                action="store_true",
+                default=False,
+            )
+        ],
+        ("freeze", "shim"): [
+            Arg(
+                "-p",
+                "--path",
+                help="generate line to add viv to sys.path",
+                choices=["abs", "rel"],
+            ),
+            Arg(
+                "-s",
+                "--standalone",
+                help="generate standalone activation function",
+                action="store_true",
+            ),
+        ],
+        ("run", "freeze", "shim"): [
+            Arg(
+                "-k",
+                "--keep",
+                help="preserve environment",
+                action="store_true",
+            ),
+            Arg("reqs", help="requirements specifiers", nargs="*"),
+            Arg(
+                "-r",
+                "--requirements",
+                help="path/to/requirements.txt file",
+                metavar="<path>",
+            ),
+        ],
+        ("run", "shim"): [
+            Arg("-b", "--bin", help="console_script/script to invoke", metavar="<bin>"),
+        ],
+        ("manage|purge", "manage|update", "manage|install"): [
+            Arg(
+                "-r",
+                "--ref",
+                help="git reference (branch/tag/commit)",
+                default="latest",
+                metavar="<ref>",
+            ),
+            Arg(
+                "-s",
+                "--src",
+                help="path/to/source_file",
+                default=c.srcdefault,
+                metavar="<src>",
+            ),
+            Arg(
+                "-c",
+                "--cli",
+                help="path/to/cli (symlink to src)",
+                default=Path.home() / ".local" / "bin" / "viv",
+                metavar="<cli>",
+            ),
+        ],
+        "manage|show": [
+            Arg(
+                "-p",
+                "--pythonpath",
+                help="show the path/to/install",
+                action="store_true",
+            )
+        ],
+        ("exe|python", "exe|pip"): [
+            Arg(
+                "cmd",
+                help="command to to execute",
+                nargs="*",
+            )
+        ],
+    }
+    cmds = (
+        "list",
+        (
+            "exe",
+            dict(
+                pip=dict(help="run cmd with pip"),
+                python=dict(help="run cmd with python"),
+            ),
+        ),
+        "remove",
+        "freeze",
+        "info",
+        (
+            "manage",
+            dict(
+                show=dict(help="show current installation", aliases=["s"]),
+                install=dict(help="install fresh viv", aliases=["i"]),
+                update=dict(help="update viv version", aliases=["u"]),
+                purge=dict(help="remove traces of viv", aliases=["p"]),
+            ),
+        ),
+        "shim",
+        "run",
+    )
+
+    def __init__(self, viv: Viv) -> None:
+        self.viv = viv
+        self.parser = ArgumentParser(prog=viv.name, description=t.description)
+        self._cmd_arg_group_map()
+        self._make_parsers()
+        self._add_args()
+
+    def _cmd_arg_group_map(self) -> None:
+        self.cmd_arg_group_map = {}
+        for grp in self.args:
+            if isinstance(grp, str):
+                self.cmd_arg_group_map.setdefault(grp, []).append(grp)
+            else:
+                for cmd in grp:
+                    self.cmd_arg_group_map.setdefault(cmd, []).append(grp)
+
+    def _make_parsers(self) -> None:
+        self.parsers = {**{grp: ArgumentParser(add_help=False) for grp in self.args}}
+
+    def _add_args(self) -> None:
+        for grp, args in self.args.items():
+            for arg in args:
+                self.parsers.get(grp).add_argument(*arg.args, **arg.kwargs)
+
+    def _validate_args(self, args: Namespace) -> None:
+        if args.func.__name__ in ("freeze", "shim", "run"):
+            if not args.reqs:
+                error("must specify a requirement", code=1)
+        if args.func.__name__ in ("freeze", "shim"):
+            if not self.viv.local_source and not (args.standalone or args.path):
+                warn(
+                    "failed to find local copy of `viv` "
+                    "make sure to add it to your PYTHONPATH "
+                    "or consider using --path/--standalone"
+                )
+
+            if args.path and not self.viv.local_source:
+                error("No local viv found to import from", code=1)
+
+            if args.path and args.standalone:
+                error("-p/--path and -s/--standalone are mutually exclusive", code=1)
+
+        if args.func.__name__ == "manage":
+            if args.cmd == "install" and self.viv.local_source:
+                error(f"found existing viv installation at {self.viv.local_source}")
+                echo(
+                    "use "
+                    + a.style("viv manage update", "bold")
+                    + " to modify current installation.",
+                    style="red",
+                )
+                sys.exit(1)
+            if args.cmd == "update":
+                if not self.viv.local_source:
+                    error(
+                        a.style("viv manage update", "bold")
+                        + " should be used with an exisiting installation",
+                        1,
+                    )
+
+                if self.viv.git:
+                    error(
+                        a.style("viv manage update", "bold")
+                        + " shouldn't be used with a git-based installation",
+                        1,
+                    )
+
     def _get_subcmd_parser(
         self,
         subparsers: _SubParsersAction[ArgumentParser],
@@ -1231,8 +1442,13 @@ class Viv:
         attr: Optional[str] = None,
         **kwargs: Any,
     ) -> ArgumentParser:
-        aliases = kwargs.pop("aliases", [name[0]])
-        cmd = getattr(self, attr if attr else name)
+        # override for remove
+        if name == "remove":
+            aliases = ["rm"]
+        else:
+            aliases = kwargs.pop("aliases", [name[0]])
+
+        cmd = getattr(self.viv, attr if attr else name)
         parser: ArgumentParser = subparsers.add_parser(
             name,
             help=cmd.__doc__.splitlines()[0],
@@ -1244,257 +1460,48 @@ class Viv:
 
         return parser
 
-    def _validate_args(self, args: Namespace) -> None:
-        if args.func.__name__ in ("freeze", "shim", "run"):
-            if not args.reqs:
-                error("must specify a requirement", code=1)
-        if args.func.__name__ in ("freeze", "shim"):
-            if not self.local_source and not (args.standalone or args.path):
-                warn(
-                    "failed to find local copy of `viv` "
-                    "make sure to add it to your PYTHONPATH "
-                    "or consider using --path/--standalone"
-                )
-
-            if args.path and not self.local_source:
-                error("No local viv found to import from", code=1)
-
-            if args.path and args.standalone:
-                error("-p/--path and -s/--standalone are mutually exclusive", code=1)
-
-        if args.func.__name__ == "manage":
-            if args.cmd == "install" and self.local_source:
-                error(f"found existing viv installation at {self.local_source}")
-                echo(
-                    "use "
-                    + a.style("viv manage update", "bold")
-                    + " to modify current installation.",
-                    style="red",
-                )
-                sys.exit(1)
-            if args.cmd == "update":
-                if not self.local_source:
-                    error(
-                        a.style("viv manage update", "bold")
-                        + " should be used with an exisiting installation",
-                        1,
-                    )
-
-                if self.git:
-                    error(
-                        a.style("viv manage update", "bold")
-                        + " shouldn't be used with a git-based installation",
-                        1,
-                    )
-
-    def cli(self) -> None:
-        """cli entrypoint"""
-
-        parser = ArgumentParser(prog=self.name, description=t.description)
-        parser.add_argument(
+    def run(self):
+        self.parser.add_argument(
             "-V",
             "--version",
             action="version",
             version=f"{a.bold}viv{a.end}, version {a.cyan}{__version__}{a.end}",
         )
 
-        subparsers = parser.add_subparsers(
+        cmd_p = self.parser.add_subparsers(
             metavar="<sub-cmd>", title="subcommands", required=True
         )
 
-        p_vivenv_arg = ArgumentParser(add_help=False)
-        p_vivenv_arg.add_argument("vivenv", help="name/hash of vivenv")
+        for cmd in self.cmds:
+            if isinstance(cmd, tuple):
+                cmd, subcmds = cmd
+                subcmd_p = self._get_subcmd_parser(cmd_p, cmd)
+                subcmd_cmd_p = subcmd_p.add_subparsers(
+                    title="subcommand", metavar="<sub-cmd>", required=True
+                )
+                for subcmd, kwargs in subcmds.items():
+                    subcmd_cmd_p.add_parser(
+                        subcmd,
+                        parents=[
+                            self.parsers.get(k)
+                            for k in self.cmd_arg_group_map[f"{cmd}|{subcmd}"]
+                        ],
+                        **kwargs,
+                    ).set_defaults(func=getattr(self.viv, cmd), subcmd=subcmd)
 
-        (p_json := ArgumentParser(add_help=False)).add_argument(
-            "--json",
-            help="name:metadata json for vivenvs ",
-            action="store_true",
-            default=False,
-        )
-
-        p_list = self._get_subcmd_parser(subparsers, "list", parents=[p_json])
-
-        p_list.add_argument(
-            "-f",
-            "--full",
-            help="show full metadata for vivenvs",
-            default=False,
-            action="store_true",
-        )
-        p_list.add_argument(
-            "-q",
-            "--quiet",
-            help="suppress non-essential output",
-            action="store_true",
-            default=False,
-        )
-
-        p_exe = self._get_subcmd_parser(
-            subparsers,
-            "exe",
-        )
-        p_exe_sub = p_exe.add_subparsers(
-            title="subcommand", metavar="<sub-cmd>", required=True
-        )
-
-        p_exe_shared = ArgumentParser(add_help=False)
-        p_exe_shared.add_argument(
-            "cmd",
-            help="command to to execute",
-            nargs="*",
-        )
-
-        p_exe_sub.add_parser(
-            "python",
-            help="run command with python",
-            parents=[p_vivenv_arg, p_exe_shared],
-        ).set_defaults(func=self.exe, exe="python")
-
-        p_exe_sub.add_parser(
-            "pip", help="run command with pip", parents=[p_vivenv_arg, p_exe_shared]
-        ).set_defaults(func=self.exe, exe="pip")
-
-        p_remove = self._get_subcmd_parser(
-            subparsers,
-            "remove",
-            aliases=["rm"],
-        )
-
-        p_remove.add_argument("vivenv", help="name/hash of vivenv", nargs="*")
-
-        p_freeze_shim_shared = ArgumentParser(add_help=False)
-
-        p_freeze_shim_shared.add_argument(
-            "-p",
-            "--path",
-            help="generate line to add viv to sys.path",
-            choices=["abs", "rel"],
-        )
-        p_freeze_shim_shared.add_argument(
-            "-r",
-            "--requirements",
-            help="path/to/requirements.txt file",
-            metavar="<path>",
-        )
-        p_freeze_shim_shared.add_argument(
-            "-k",
-            "--keep",
-            help="preserve environment",
-            action="store_true",
-        )
-        p_freeze_shim_shared.add_argument(
-            "-s",
-            "--standalone",
-            help="generate standalone activation function",
-            action="store_true",
-        )
-        p_freeze_shim_shared.add_argument(
-            "reqs", help="requirements specifiers", nargs="*"
-        )
-
-        self._get_subcmd_parser(subparsers, "freeze", parents=[p_freeze_shim_shared])
-        self._get_subcmd_parser(
-            subparsers,
-            "info",
-            parents=[p_vivenv_arg, p_json],
-        )
-        p_manage_shared = ArgumentParser(add_help=False)
-        p_manage_shared.add_argument(
-            "-r",
-            "--ref",
-            help="git reference (branch/tag/commit)",
-            default="latest",
-            metavar="<ref>",
-        )
-
-        p_manage_shared.add_argument(
-            "-s",
-            "--src",
-            help="path/to/source_file",
-            default=c.srcdefault,
-            metavar="<src>",
-        )
-        p_manage_shared.add_argument(
-            "-c",
-            "--cli",
-            help="path/to/cli (symlink to src)",
-            default=Path.home() / ".local" / "bin" / "viv",
-            metavar="<cli>",
-        )
-
-        p_manage_sub = self._get_subcmd_parser(
-            subparsers,
-            name="manage",
-        ).add_subparsers(title="subcommand", metavar="<sub-cmd>", required=True)
-
-        p_manage_sub.add_parser(
-            "install", help="install viv", aliases="i", parents=[p_manage_shared]
-        ).set_defaults(func=self.manage, cmd="install")
-
-        p_manage_sub.add_parser(
-            "update",
-            help="update viv version",
-            aliases="u",
-            parents=[p_manage_shared],
-        ).set_defaults(func=self.manage, cmd="update")
-
-        (
-            p_manage_show := p_manage_sub.add_parser(
-                "show", help="show current installation info", aliases="s"
-            )
-        ).set_defaults(func=self.manage, cmd="show")
-
-        p_manage_show.add_argument(
-            "-p", "--pythonpath", help="show the path/to/install", action="store_true"
-        )
-
-        p_manage_sub.add_parser(
-            "purge", help="remove traces of viv", aliases="p", parents=[p_manage_shared]
-        ).set_defaults(func=self.manage, cmd="purge")
-        (p_run_shim_shared := ArgumentParser(add_help=False)).add_argument(
-            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
-        )
-
-        p_shim = self._get_subcmd_parser(
-            subparsers, "shim", parents=[p_freeze_shim_shared, p_run_shim_shared]
-        )
-
-        p_shim.add_argument(
-            "-f",
-            "--freeze",
-            help="freeze/resolve all dependencies",
-            action="store_true",
-        )
-        p_shim.add_argument(
-            "-o",
-            "--output",
-            help="path/to/output file",
-            type=Path,
-            metavar="<path>",
-        )
-
-        p_run = self._get_subcmd_parser(subparsers, "run", parents=[p_run_shim_shared])
-
-        p_run.add_argument(
-            "-r",
-            "--requirements",
-            help="path/to/requirements.txt file",
-            metavar="<path>",
-        )
-        p_run.add_argument(
-            "-k",
-            "--keep",
-            help="preserve environment",
-            action="store_true",
-        )
-        p_run.add_argument("reqs", help="requirements specifiers", nargs="*")
+            else:
+                self._get_subcmd_parser(
+                    cmd_p,
+                    cmd,
+                    parents=[self.parsers.get(k) for k in self.cmd_arg_group_map[cmd]],
+                )
 
         if "--" in sys.argv:
             i = sys.argv.index("--")
-            args = parser.parse_args(sys.argv[1:i])
+            args = self.parser.parse_args(sys.argv[1:i])
             args.rest = sys.argv[i + 1 :]
         else:
-            args = parser.parse_args()
+            args = self.parser.parse_args()
             args.rest = []
 
         self._validate_args(args)
@@ -1505,7 +1512,7 @@ class Viv:
 
 def main() -> None:
     viv = Viv()
-    viv.cli()
+    Cli(viv).run()
 
 
 if __name__ == "__main__":
