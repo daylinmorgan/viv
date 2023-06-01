@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-29-g0ccf72c-dev"
+__version__ = "23.5a4-29-g4a1f01f-dev"
 
 
 class Config:
@@ -1411,7 +1411,7 @@ class Cli:
                 error("-p/--path and -s/--standalone are mutually exclusive", code=1)
 
         if args.func.__name__ == "manage":
-            if args.cmd == "install" and self.viv.local_source:
+            if args.subcmd == "install" and self.viv.local_source:
                 error(f"found existing viv installation at {self.viv.local_source}")
                 echo(
                     "use "
@@ -1420,7 +1420,7 @@ class Cli:
                     style="red",
                 )
                 sys.exit(1)
-            if args.cmd == "update":
+            if args.subcmd == "update":
                 if not self.viv.local_source:
                     error(
                         a.style("viv manage update", "bold")
