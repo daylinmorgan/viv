@@ -10,18 +10,23 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Add Source to Docs
-        run: cp ./src/viv/viv.py docs/viv.py
+      - uses: pdm-project/setup-pdm@v3
+        with:
+          python-version: 3.11
+          cache: true
+
+      - name: Setup Project
+        run: pdm install
+
+      - name: Build Docs
+        run: pdm run make docs
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           cname: viv.dayl.in 
-          # publish_dir: ./site
-          publish_dir: ./docs
+          publish_dir: ./site

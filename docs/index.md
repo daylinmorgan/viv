@@ -8,7 +8,7 @@
   viv isn't venv
   </p>
   <p align="center">
-    <a href="https://viv.dayl.in">Documentation</a>
+    <a href="viv.dayl.in">Documentation</a>
   </p>
 </div>
 

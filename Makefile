@@ -22,6 +22,15 @@ venv: ## generate environment
 dev-install:
 	cp ./src/viv/viv.py ~/.local/share/viv/viv.py
 
+docs: docs/index.md docs/viv.py ## build docs
+	mkdocs build
+
+docs/viv.py: src/viv/viv.py
+	cp $< $@
+
+docs/index.md: README.md
+	cp $< $@
+
 clean: ## remove build artifacts
 	rm -rf {build,dist}
 
