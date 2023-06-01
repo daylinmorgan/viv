@@ -746,20 +746,17 @@ class ViVenv:
             verbose=bool(os.getenv("VIV_VERBOSE")),
         )
 
-    def show(self, verbose: bool = False) -> None:
-        if not verbose:
-            _id = (
+    def show(self) -> None:
+        _id = (
                 self.meta.id[:8]
                 if self.meta.id == self.name
                 else (self.name[:5] + "..." if len(self.name) > 8 else self.name)
             )
 
-            sys.stdout.write(
+        sys.stdout.write(
                 f"""{a.bold}{a.cyan}{_id}{a.end} """
                 f"""{a.style(", ".join(self.meta.spec),'dim')}\n"""
             )
-        else:
-            self.tree()
 
     def _tree_leaves(self, items: List[str], indent: str = "") -> str:
         tree_chars = ["├"] * (len(items) - 1) + ["╰"]
@@ -999,9 +996,14 @@ class Viv:
             sys.stdout.write("\n".join(self.vivenvs) + "\n")
         elif len(self.vivenvs) == 0:
             echo("no vivenvs setup")
+        elif args.full:
+            for _, vivenv in self.vivenvs.items():
+                vivenv.tree()
+        elif args.json:
+            sys.stdout.write(json.dumps({k:v.meta.__dict__ for k,v in self.vivenvs.items()}))
         else:
             for _, vivenv in self.vivenvs.items():
-                vivenv.show(args.verbose)
+                vivenv.show()
 
     def exe(self, args: Namespace) -> None:
         """run python/pip in existing vivenv"""
@@ -1292,8 +1294,8 @@ class Viv:
         p_list = self._get_subcmd_parser(subparsers, "list")
 
         p_list.add_argument(
-            "-v",
-            "--verbose",
+            "-f",
+            "--full",
             help="show full metadata for vivenvs",
             default=False,
             action="store_true",
@@ -1302,6 +1304,12 @@ class Viv:
             "-q",
             "--quiet",
             help="suppress non-essential output",
+            action="store_true",
+            default=False,
+        )
+        p_list.add_argument(
+            "--json",
+            help="name:metadata json for vivenvs ",
             action="store_true",
             default=False,
         )
