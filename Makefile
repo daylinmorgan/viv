@@ -31,6 +31,10 @@ docs/viv.py: src/viv/viv.py
 docs/index.md: README.md
 	cp $< $@
 
+examples/black: .FORCE
+	rm -f $@
+	viv shim black -s -f -o $@
+
 clean: ## remove build artifacts
 	rm -rf {build,dist}
 
@@ -39,4 +43,7 @@ generate-example-vivens: ##
 	for f in $(EXAMPLES); \
 		do python examples/$$f; done
 
+
+.FORCE:
+.PHONY: .FORCE
 -include .task.cfg.mk

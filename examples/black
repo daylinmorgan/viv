@@ -1,26 +1,43 @@
 #!/usr/bin/env python3
-# fmt: off
-def _viv_use(*pkgs, track_exe=False, name=""):                                                          # noqa
-    T,F,N=True,False,None;i,s,m,spec=__import__,str,map,[*pkgs]                                         # noqa
-    e,w=lambda x: T if x else F,lambda p,t: p.write_text(t)                                             # noqa
-    if not {*m(type,pkgs)}=={s}: raise ValueError(f"spec: {pkgs} is invalid")                           # noqa
-    ge,sys,P,ew=i("os").getenv,i("sys"),i("pathlib").Path,i("sys").stderr.write                         # noqa
-    (cache:=(P(ge("XDG_CACHE_HOME",P.home()/".cache"))/"viv"/"venvs")).mkdir(parents=T,exist_ok=T)      # noqa
-    ((sha256:=i("hashlib").sha256()).update((s(spec)+                                                   # noqa
-    (((exe:=("N/A",s(P(i("sys").executable).resolve()))[e(track_exe)])))).encode()))                    # noqa
-    if {env:=cache/(((_id:=sha256.hexdigest()),name)[e(name)])}-{*cache.glob("*/")} or ge("VIV_FORCE"): # noqa
-        v=e(ge("VIV_VERBOSE"));ew(f"generating new vivenv -> {env.name}\n")                             # noqa
-        i("venv").EnvBuilder(with_pip=T,clear=T).create(env)                                            # noqa
-        w(env/"pip.conf","[global]\ndisable-pip-version-check=true")                                    # noqa
-        if (rc:=(p:=i("subprocess").run([env/"bin"/"pip","install","--force-reinstall",*spec],text=T,   # noqa
-            stdout=(-1,N)[v],stderr=(-2,N)[v])).returncode)!=0:                                         # noqa
-            if env.is_dir():i("shutil").rmtree(env)                                                     # noqa
-            ew(f"pip had non zero exit ({rc})\n{p.stdout}\n");sys.exit(rc)                              # noqa
-        w(env/"viv-info.json",i("json").dumps(                                                          # noqa
-            {"created":s(i("datetime").datetime.today()),"id":_id,"spec":spec,"exe":exe}))              # noqa
-    sys.path=[p for p in (*sys.path,s(*(env/"lib").glob("py*/si*")))if p!=i("site").USER_SITE]          # noqa
-    return env                                                                                          # noqa
-# fmt: on
+def _viv_use(*pkgs, track_exe=False, name=""):
+    import hashlib, json, os, site, shutil, sys, venv  # noqa
+    from pathlib import Path  # noqa
+    from datetime import datetime  # noqa
+    from subprocess import run  # noqa
+
+    if not {*map(type, pkgs)} == {str}:
+        raise ValueError(f"spec: {pkgs} is invalid")
+
+    meta = dict.fromkeys(("created", "accessed"), (t := str(datetime.today())))
+    runner = str(Path(__file__).absolute().resolve())
+    force, verbose, xdg = map(os.getenv, ("VIV_FORCE", "VIV_VERBOSE", "XDG_CACHE_HOME"))
+    cache = (Path(xdg) if xdg else Path.home() / ".cache") / "viv" / "venvs"
+    cache.mkdir(parents=True, exist_ok=True)
+    exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
+    (sha256 := hashlib.sha256()).update((str(spec := [*pkgs]) + exe).encode())
+    _id = sha256.hexdigest()
+    if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
+        sys.stderr.write(f"generating new vivenv -> {env.name}\n")
+        venv.EnvBuilder(with_pip=True, clear=True).create(env)
+        (env / "pip.conf").write_text("[global]\ndisable-pip-version-check=true")
+        run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
+        p = run([env / "bin" / "pip", "install", "--force-reinstall", *spec], **run_kw)
+        if (rc := p.returncode) != 0:
+            if env.is_dir():
+                shutil.rmtree(env)
+            sys.stderr.write(f"pip had non zero exit ({rc})\n{p.stdout.decode()}\n")
+            sys.exit(rc)
+        meta.update(dict(id=_id, spec=spec, exe=exe, name=name, files=[runner]))
+    else:
+        meta = json.loads((env / "vivmeta.json").read_text())
+        meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
+
+    (env / "vivmeta.json").write_text(json.dumps(meta))
+    sys.path = [p for p in sys.path if not p != site.USER_SITE]
+    site.addsitedir(str(*(env / "lib").glob("py*/si*")))
+    return env
+
+
 import subprocess
 import sys
 
