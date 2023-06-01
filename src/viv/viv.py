@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-26-g35bffae-dev"
+__version__ = "23.5a4-27-g1c2e5a8-dev"
 
 
 class Config:
@@ -1038,8 +1038,10 @@ class Viv:
 
         if not metadata_file.is_file():
             error(f"Unable to find metadata for vivenv: {args.vivenv}", code=1)
-
-        vivenv.tree()
+        if args.json:
+            sys.stdout.write(json.dumps(vivenv.meta.__dict__))
+        else:
+            vivenv.tree()
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path) -> None:
         echo("updating local source copy of viv")
@@ -1299,9 +1301,18 @@ class Viv:
         subparsers = parser.add_subparsers(
             metavar="<sub-cmd>", title="subcommands", required=True
         )
+
         p_vivenv_arg = ArgumentParser(add_help=False)
         p_vivenv_arg.add_argument("vivenv", help="name/hash of vivenv")
-        p_list = self._get_subcmd_parser(subparsers, "list")
+
+        (p_json := ArgumentParser(add_help=False)).add_argument(
+            "--json",
+            help="name:metadata json for vivenvs ",
+            action="store_true",
+            default=False,
+        )
+
+        p_list = self._get_subcmd_parser(subparsers, "list", parents=[p_json])
 
         p_list.add_argument(
             "-f",
@@ -1314,12 +1325,6 @@ class Viv:
             "-q",
             "--quiet",
             help="suppress non-essential output",
-            action="store_true",
-            default=False,
-        )
-        p_list.add_argument(
-            "--json",
-            help="name:metadata json for vivenvs ",
             action="store_true",
             default=False,
         )
@@ -1391,7 +1396,7 @@ class Viv:
         self._get_subcmd_parser(
             subparsers,
             "info",
-            parents=[p_vivenv_arg],
+            parents=[p_vivenv_arg, p_json],
         )
         p_manage_shared = ArgumentParser(add_help=False)
         p_manage_shared.add_argument(
@@ -1446,9 +1451,12 @@ class Viv:
         p_manage_sub.add_parser(
             "purge", help="remove traces of viv", aliases="p", parents=[p_manage_shared]
         ).set_defaults(func=self.manage, cmd="purge")
+        (p_run_shim_shared := ArgumentParser(add_help=False)).add_argument(
+            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
+        )
 
         p_shim = self._get_subcmd_parser(
-            subparsers, "shim", parents=[p_freeze_shim_shared]
+            subparsers, "shim", parents=[p_freeze_shim_shared, p_run_shim_shared]
         )
 
         p_shim.add_argument(
@@ -1464,11 +1472,8 @@ class Viv:
             type=Path,
             metavar="<path>",
         )
-        p_shim.add_argument(
-            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
-        )
 
-        p_run = self._get_subcmd_parser(subparsers, "run")
+        p_run = self._get_subcmd_parser(subparsers, "run", parents=[p_run_shim_shared])
 
         p_run.add_argument(
             "-r",
@@ -1483,10 +1488,6 @@ class Viv:
             action="store_true",
         )
         p_run.add_argument("reqs", help="requirements specifiers", nargs="*")
-
-        p_run.add_argument(
-            "-b", "--bin", help="console_script/script to invoke", metavar="<bin>"
-        )
 
         if "--" in sys.argv:
             i = sys.argv.index("--")
