@@ -50,42 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-29-g4a1f01f-dev"
-
-
-class Config:
-    """viv config manager"""
-
-    def __init__(self) -> None:
-        self._cache = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv"
-
-    def _ensure(self, p: Path) -> Path:
-        p.mkdir(parents=True, exist_ok=True)
-        return p
-
-    @property
-    def venvcache(self) -> Path:
-        return self._ensure(self._cache / "venvs")
-
-    @property
-    def srccache(self) -> Path:
-        return self._ensure(self._cache / "src")
-
-    @property
-    def binparent(self) -> Path:
-        return self._ensure(
-            Path(os.getenv("VIV_BIN_DIR", Path.home() / ".local" / "bin"))
-        )
-
-    @property
-    def srcdefault(self) -> Path:
-        parent = (
-            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
-        )
-        return self._ensure(parent) / "viv.py"
-
-
-c = Config()
+__version__ = "23.5a4-30-g3cf2dce-dev"
 
 
 class Spinner:
@@ -391,7 +356,7 @@ if __name__ == "__main__":
 t = Template()
 
 
-# TODO: convet the below functions into a proper file/stream logging interface
+# TODO: convert the below functions into a proper file/stream logging interface
 def echo(
     msg: str, style: str = "magenta", newline: bool = True, fd: TextIO = sys.stderr
 ) -> None:
@@ -897,6 +862,41 @@ def make_executable(path: Path) -> None:
     mode = os.stat(path).st_mode
     mode |= (mode & 0o444) >> 2  # copy R bits to X
     os.chmod(path, mode)
+
+
+class Config:
+    """viv config manager"""
+
+    def __init__(self) -> None:
+        self._cache = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv"
+
+    def _ensure(self, p: Path) -> Path:
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    @property
+    def venvcache(self) -> Path:
+        return self._ensure(self._cache / "venvs")
+
+    @property
+    def srccache(self) -> Path:
+        return self._ensure(self._cache / "src")
+
+    @property
+    def binparent(self) -> Path:
+        return self._ensure(
+            Path(os.getenv("VIV_BIN_DIR", Path.home() / ".local" / "bin"))
+        )
+
+    @property
+    def srcdefault(self) -> Path:
+        parent = (
+            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
+        )
+        return self._ensure(parent) / "viv.py"
+
+
+c = Config()
 
 
 class Viv:
