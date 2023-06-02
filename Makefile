@@ -33,7 +33,7 @@ docs/index.md: README.md
 
 examples/black: .FORCE
 	rm -f $@
-	viv shim black -s -f -o $@
+	viv shim black -y -s -f -o $@
 
 clean: ## remove build artifacts
 	rm -rf {build,dist}

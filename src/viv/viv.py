@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-1-g853e6e6-dev"
+__version__ = "23.5a5-2-ge70afb3-dev"
 
 
 class Spinner:
@@ -233,7 +233,7 @@ to create/activate a vivenv:
         meta.update(dict(id=_id, spec=spec, exe=exe, name=name, files=[runner]))
     else:
         meta = json.loads((env / "vivmeta.json").read_text())
-        meta.update(dict(accessed=t, files=sorted({*meta["files"],runner})))
+        meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
 
     (env / "vivmeta.json").write_text(json.dumps(meta))
     sys.path = [p for p in sys.path if not p != site.USER_SITE]
@@ -386,11 +386,15 @@ def warn(msg: str) -> None:
     echo(f"{a.yellow}warn:{a.end} {msg}", style="yellow")
 
 
-def confirm(question: str, context: str = "") -> bool:
+def confirm(question: str, context: str = "", yes: bool = False) -> bool:
     sys.stderr.write(context)
     sys.stderr.write(
         a.viv_preamble(sep="?? ") + question + a.style(" (Y)es/(n)o ", "yellow")
     )
+    if yes:
+        sys.stderr.write(f"{a.green}[FORCED YES]{a.end}\n")
+        return True
+
     while True:
         ans = input().strip().lower()
         if ans in ("y", "yes"):
@@ -1056,7 +1060,7 @@ class Viv:
         else:
             vivenv.tree()
 
-    def _install_local_src(self, sha256: str, src: Path, cli: Path) -> None:
+    def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         echo("updating local source copy of viv")
         shutil.copy(c.srccache / f"{sha256}.py", src)
         make_executable(src)
@@ -1064,7 +1068,7 @@ class Viv:
 
         if cli.is_file():
             echo(f"Existing file at {a.style(str(cli),'bold')}")
-            if confirm("Would you like to overwrite it?"):
+            if confirm("Would you like to overwrite it?", yes=yes):
                 cli.unlink()
                 cli.symlink_to(src)
         else:
@@ -1109,6 +1113,7 @@ class Viv:
             if confirm(
                 "Would you like to perform the above installation steps?",
                 t.update(self.local_source, args.cli, self.local_version, next_version),
+                yes=args.yes,
             ):
                 self._install_local_src(
                     sha256,
@@ -1116,6 +1121,7 @@ class Viv:
                         args.src if not self.local_source else self.local_source,
                     ),
                     args.cli,
+                    args.yes,
                 )
 
         elif args.subcmd == "install":
@@ -1129,6 +1135,7 @@ class Viv:
             if confirm(
                 "Would you like to perform the above installation steps?",
                 t.install(args.src, args.cli),
+                yes=args.yes,
             ):
                 self._install_local_src(sha256, args.src, args.cli)
 
@@ -1153,6 +1160,7 @@ class Viv:
             if confirm(
                 "Remove the above files/directories?",
                 "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
+                yes=args.yes,
             ):
                 for p in to_remove:
                     if p.is_dir():
@@ -1191,7 +1199,8 @@ class Viv:
             spec = combined_spec(args.reqs, args.requirements)
 
         if confirm(
-            f"Write shim for {a.style(bin,'bold')} to {a.style(output,'green')}?"
+            f"Write shim for {a.style(bin,'bold')} to {a.style(output,'green')}?",
+            yes=args.yes,
         ):
             with output.open("w") as f:
                 f.write(
@@ -1368,7 +1377,10 @@ class Cli:
                 metavar="<cli>",
             ),
         ],
-        "manage|show": [
+        ("shim", "manage|purge", "manage|update", "manage|install"): [
+            Arg("-y", "--yes", help="respond yes to all prompts", action="store_true")
+        ],
+        ("manage|show",): [
             Arg(
                 "-p",
                 "--pythonpath",
@@ -1376,7 +1388,7 @@ class Cli:
                 action="store_true",
             )
         ],
-        ("exe"): [
+        ("exe",): [
             Arg(
                 "cmd",
                 help="command to to execute",
