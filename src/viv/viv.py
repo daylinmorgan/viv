@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-43-gcdeed9f-dev"
+__version__ = "23.5a4-43-g993e0e6-dev"
 
 
 class Spinner:
@@ -1361,16 +1361,15 @@ class Cli:
         )
     ).update(
         {
-            #     "exe": dict(
-            #         pip=dict(help="run cmd with pip"),
-            #         python=dict(help="run cmd with python"),
-            #     ),
-            "manage": dict(
-                show=dict(help="show current installation", aliases=["s"]),
-                install=dict(help="install fresh viv", aliases=["i"]),
-                update=dict(help="update viv version", aliases=["u"]),
-                purge=dict(help="remove traces of viv", aliases=["p"]),
-            ),
+            "manage": {
+                subcmd: {"help": help, "aliases": [subcmd[0]]}
+                for subcmd, help in (
+                    ("show", "show current installation"),
+                    ("install", "install fresh viv"),
+                    ("update", "update viv version"),
+                    ("purge", "remove traces of viv"),
+                )
+            }
         }
     )
 
