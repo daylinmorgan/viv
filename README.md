@@ -20,13 +20,10 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run pycowsay -- "viv isn't venv\!"
 
 `Viv` is a standalone dependency-free `venv` creator.
 
-These `venvs` can be identified by name or by their specification.
-In any case they will be re-used across scripts (and generated on-demand, if needed).
+`Viv`'s uncompromising insistence on portability means that it will always:
 
-**Importantly**, `viv` will also remove your user site directory.
-(view with: `python -m 'import site;print(site.USER_SITE)'`).
-
-`Viv`'s uncompromising insistence on portability means that it will always (1) only use the standard library (2) never exceed a single script.
+1. only use the standard library
+2. never exceed a single script.
 
 For that reason any usage of the `CLI` can be accomplished using a remote copy as seen in the below install command.
 
@@ -44,11 +41,6 @@ By default `viv` will be installed to `$XDG_DATA_HOME/viv` or `~/.local/share/vi
 ```sh
 export PYTHONPATH="$PYTHONPATH:$HOME/.local/share/viv"
 ```
-
-Advanced users may recognize that principally,
-the module just needs to be recognized at run time
-and the single script [`viv.py`](https://github.com/daylinmorgan/viv/blob/main/src/viv/viv.py) can be invoked directly for the CLI.
-How you accomplish these options is ultimately up to you but the above instructions can get you started.
 
 ### Pypi (Not Recommended)
 
@@ -85,8 +77,8 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) manage purge
 An experimental feature of `viv` is generating shim's that leverage the principles of `viv`.
 These shims would operate similar to `pipx` in which you can specify a command line app to "install".
 
-*Note* that `--standalone` will auto-generate a code-golfed minified version of `viv` to accomplish the same basic task as using a local copy of `viv`.
-After generating this a standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
+*Note* that `--standalone` will auto-generate a mini function version of `viv` to accomplish the same basic task as using a local copy of `viv`.
+After generating this standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
 See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
 
 ```sh
