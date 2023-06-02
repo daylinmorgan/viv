@@ -51,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-34-gd1ea8c3-dev"
+__version__ = "23.5a4-35-g9229337-dev"
 
 
 class Spinner:
@@ -1263,7 +1263,7 @@ class Cli:
             ),
         ],
         ("remove",): [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
-        ("exe|pip", "exe|python"): [Arg("vivenv", help="name/hash of vivenv")],
+        ("exe|pip", "exe|python", "info"): [Arg("vivenv", help="name/hash of vivenv")],
         ("list", "info"): [
             Arg(
                 "--json",
@@ -1343,24 +1343,33 @@ class Cli:
             )
         ],
     }
-    cmds = {
-        "list": None,
-        "exe": dict(
-            pip=dict(help="run cmd with pip"),
-            python=dict(help="run cmd with python"),
-        ),
-        "remove": None,
-        "freeze": None,
-        "info": None,
-        "manage": dict(
-            show=dict(help="show current installation", aliases=["s"]),
-            install=dict(help="install fresh viv", aliases=["i"]),
-            update=dict(help="update viv version", aliases=["u"]),
-            purge=dict(help="remove traces of viv", aliases=["p"]),
-        ),
-        "shim": None,
-        "run": None,
-    }
+    (
+        cmds := dict.fromkeys(
+            (
+                "list",
+                "shim",
+                "run",
+                "exe",
+                "remove",
+                "freeze",
+                "info",
+                "manage",
+            )
+        )
+    ).update(
+        {
+            "exe": dict(
+                pip=dict(help="run cmd with pip"),
+                python=dict(help="run cmd with python"),
+            ),
+            "manage": dict(
+                show=dict(help="show current installation", aliases=["s"]),
+                install=dict(help="install fresh viv", aliases=["i"]),
+                update=dict(help="update viv version", aliases=["u"]),
+                purge=dict(help="remove traces of viv", aliases=["p"]),
+            ),
+        }
+    )
 
     def __init__(self, viv: Viv) -> None:
         self.viv = viv
