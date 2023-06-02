@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5"
+__version__ = "23.5a5-9-gaf1a87d-dev"
 
 
 class Spinner:
@@ -831,31 +831,34 @@ def resolve_deps(args: Namespace) -> List[str]:
     return resolved_spec
 
 
-def fetch_source(reference: str) -> str:
+def fetch_script(url: str) -> str:
     try:
-        r = urlopen(
-            "https://raw.githubusercontent.com/daylinmorgan/viv/"
-            + reference
-            + "/src/viv/viv.py"
+        r = urlopen(url)
+    except (HTTPError, ValueError) as e:
+        error(f"Failed to fetch from remote url:\n  {a.bold}{url}{a.end}")
+        echo(
+            "see below:" + a.style("->  ", "red").join(["\n"] + repr(e).splitlines()),
+            style="red",
         )
-    except HTTPError as e:
-        error(
-            "Issue updating viv see below:"
-            + a.style("->  ", "red").join(["\n"] + repr(e).splitlines())
-        )
-        if "404" in repr(e):
-            echo("Please check your reference is valid.", style="red")
         sys.exit(1)
 
-    src = r.read()
-    (hash := hashlib.sha256()).update(src)
+    return r.read().decode("utf-8")
+
+
+def fetch_source(reference: str) -> str:
+    src = fetch_script(
+        "https://raw.githubusercontent.com/daylinmorgan/viv/"
+        + reference
+        + "/src/viv/viv.py"
+    )
+
+    (hash := hashlib.sha256()).update(src.encode())
     sha256 = hash.hexdigest()
 
     cached_src_file = c.srccache / f"{sha256}.py"
 
     if not cached_src_file.is_file():
-        with cached_src_file.open("w") as f:
-            f.write(src.decode())
+        cached_src_file.write_text(src)
 
     return sha256
 
@@ -871,7 +874,12 @@ class Config:
     """viv config manager"""
 
     def __init__(self) -> None:
-        self._cache = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv"
+        self._cache = Path(
+            os.getenv(
+                "VIV_CACHE",
+                Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv",
+            )
+        )
 
     def _ensure(self, p: Path) -> Path:
         p.mkdir(parents=True, exist_ok=True)
@@ -1193,40 +1201,65 @@ class Viv:
 
     def run(self, args: Namespace) -> None:
         """\
-        run an app with an on-demand venv
+        run an app/script with an on-demand venv
 
         examples:
           viv r pycowsay -- "viv isn't venv\!"
           viv r rich -b python -- -m rich
+          viv r -s <remote python script>
         """
 
-        _, bin = self._pick_bin(args)
-        spec = combined_spec(args.reqs, args.requirements)
-        vivenv = ViVenv(spec)
+        if args.script:
+            env = os.environ
+            name = args.script.split("/")[-1]
 
-        # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
-        # ephemeral (default), semi-ephemeral (persist inside /tmp), or
-        # persist (use c.cache)
+            with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+                tmppath = Path(tmpdir)
+                script = tmppath / name
+                if not self.local_source:
+                    (tmppath / "viv.py").write_text(
+                        fetch_script(
+                            "https://raw.githubusercontent.com/daylinmorgan/viv/script-runner/src/viv/viv.py"
+                        )
+                    )
 
-        if not vivenv.loaded or os.getenv("VIV_FORCE"):
-            if not args.keep:
-                with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-                    vivenv.path = Path(tmpdir)
+                script.write_text(fetch_script(args.script))
+                if not args.keep:
+                    env.update({"VIV_CACHE": tmpdir})
+
+                sys.exit(
+                    subprocess.run(
+                        [sys.executable, script, *args.rest], env=env
+                    ).returncode
+                )
+        else:
+            _, bin = self._pick_bin(args)
+            spec = combined_spec(args.reqs, args.requirements)
+            vivenv = ViVenv(spec)
+
+            # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
+            # ephemeral (default), semi-ephemeral (persist inside /tmp), or
+            # persist (use c.cache)
+
+            if not vivenv.loaded or os.getenv("VIV_FORCE"):
+                if not args.keep:
+                    with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+                        vivenv.path = Path(tmpdir)
+                        vivenv.create()
+                        vivenv.install_pkgs()
+                        sys.exit(
+                            subprocess.run(
+                                [vivenv.path / "bin" / bin, *args.rest]
+                            ).returncode
+                        )
+                else:
                     vivenv.create()
                     vivenv.install_pkgs()
-                    sys.exit(
-                        subprocess.run(
-                            [vivenv.path / "bin" / bin, *args.rest]
-                        ).returncode
-                    )
-            else:
-                vivenv.create()
-                vivenv.install_pkgs()
 
-        vivenv.touch()
-        vivenv.meta.write()
+            vivenv.touch()
+            vivenv.meta.write()
 
-        sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
+            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
 
 
 class Arg:
@@ -1267,6 +1300,9 @@ class Cli:
             ),
         ],
         ("remove",): [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
+        ("run",): [
+            Arg("-s", "--script", help="remote script to run", metavar="<script>")
+        ],
         ("exe", "info"): [Arg("vivenv", help="name/hash of vivenv")],
         ("list", "info"): [
             Arg(
@@ -1398,7 +1434,7 @@ class Cli:
                 self.parsers[grp].add_argument(*arg.args, **arg.kwargs)
 
     def _validate_args(self, args: Namespace) -> None:
-        if args.func.__name__ in ("freeze", "shim", "run"):
+        if args.func.__name__ in ("freeze", "shim"):
             if not args.reqs:
                 error("must specify a requirement", code=1)
         if args.func.__name__ in ("freeze", "shim"):
@@ -1439,6 +1475,14 @@ class Cli:
                         + " shouldn't be used with a git-based installation",
                         1,
                     )
+        if args.func.__name__ == "run":
+            if not (args.reqs or args.script):
+                error("must specify a requirement or --script", code=1)
+            if args.script and args.reqs:
+                error(
+                    "script mode does not support additional requirements currently",
+                    code=1,
+                )
 
     def _get_subcmd_parser(
         self,
