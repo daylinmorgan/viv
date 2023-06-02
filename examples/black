@@ -18,7 +18,7 @@ def _viv_use(*pkgs, track_exe=False, name=""):
     _id = sha256.hexdigest()
     if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.EnvBuilder(with_pip=True, clear=True).create(env)
+        venv.create(env, symlinks=True, with_pip=True, clear=True).create(env)
         (env / "pip.conf").write_text("[global]\ndisable-pip-version-check=true")
         run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
         p = run([env / "bin" / "pip", "install", "--force-reinstall", *spec], **run_kw)
