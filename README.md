@@ -1,12 +1,17 @@
-# viv
-
 <div align="center">
   <a href="https://github.com/daylinmorgan/viv">
     <img src="https://raw.githubusercontent.com/daylinmorgan/viv/main/assets/logo.svg" alt="Logo" width=500 >
   </a>
   <p align="center">
-  viv isn't venv
+  <h1> viv isn't venv </h1>
   </p>
+  <div align="center">
+    <img
+      src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/svgs/viv-help.svg"
+      alt="cli screenshot"
+      width="500"
+      >
+  </div>
   <p align="center">
     <a href="https://viv.dayl.in">Documentation</a>
   </p>
