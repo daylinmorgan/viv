@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-9-gaf1a87d-dev"
+__version__ = "23.5a5-1-g853e6e6-dev"
 
 
 class Spinner:
@@ -353,6 +353,7 @@ if __name__ == "__main__":
                     ("CLI", cli),
                     ("Running Source", running),
                     ("Local Source", local),
+                    ("Cache", c._cache),
                 )
             )
             + "\n"
