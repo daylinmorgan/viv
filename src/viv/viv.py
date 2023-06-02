@@ -43,6 +43,7 @@ from typing import (
     List,
     NoReturn,
     Optional,
+    Sequence,
     TextIO,
     Tuple,
     Type,
@@ -50,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-33-g0996628-dev"
+__version__ = "23.5a4-34-gd1ea8c3-dev"
 
 
 class Spinner:
@@ -171,7 +172,7 @@ class Ansi:
             )
         )
 
-    def subprocess(self, output: str) -> None:
+    def subprocess(self, command: List[str], output: str) -> None:
         """generate output for subprocess error
 
         Args:
@@ -179,9 +180,12 @@ class Ansi:
         """
         if not output:
             return
-        echo("subprocess output:")
+
+        error("subprocess failed")
+        echo("see below for command output", style="red")
+        echo(f"cmd:\n  {' '.join(command)}", style="red")
         new_output = [f"{self.red}->{self.end} {line}" for line in output.splitlines()]
-        sys.stdout.write("\n".join(new_output) + "\n")
+        echo("subprocess output:" + "\n".join(("", *new_output, "")), style="red")
 
     def viv_preamble(self, style: str = "magenta", sep: str = "::") -> str:
         return f"{self.cyan}viv{self.end}{self.__dict__[style]}{sep}{self.end}"
@@ -561,9 +565,7 @@ def run(
         )
 
     if p.returncode != 0 and not ignore_error:
-        error("subprocess failed")
-        echo("see below for command output", style="red")
-        a.subprocess(p.stdout)
+        a.subprocess(command, p.stdout)
 
         if clean_up_path and clean_up_path.is_dir():
             shutil.rmtree(str(clean_up_path))
@@ -808,21 +810,20 @@ def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
 def resolve_deps(args: Namespace) -> List[str]:
     spec = combined_spec(args.reqs, args.requirements)
 
-    with Spinner("resolving depedencies"):
-        cmd = [
-            "pip",
-            "install",
-            "--quiet",
-            "--ignore-installed",
-            "--report",
-            "-",
-        ] + spec
+    cmd = [
+        "pip",
+        "install",
+        "--quiet",
+        "--ignore-installed",
+        "--report",
+        "-",
+    ] + spec
 
-        report = json.loads(run(cmd, check_output=True))
-        resolved_spec = [
-            f"{pkg['metadata']['name']}=={pkg['metadata']['version']}"
-            for pkg in report["install"]
-        ]
+    report = json.loads(run(cmd, check_output=True, spinmsg="resolving depedencies"))
+    resolved_spec = [
+        f"{pkg['metadata']['name']}=={pkg['metadata']['version']}"
+        for pkg in report["install"]
+    ]
 
     return resolved_spec
 
@@ -1232,7 +1233,7 @@ class Arg:
 
 class Cli:
     args = {
-        "list": [
+        ("list",): [
             Arg(
                 "-f",
                 "--full",
@@ -1246,7 +1247,7 @@ class Cli:
                 action="store_true",
             ),
         ],
-        "shim": [
+        ("shim",): [
             Arg(
                 "-f",
                 "--freeze",
@@ -1261,7 +1262,7 @@ class Cli:
                 metavar="<path>",
             ),
         ],
-        "remove": [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
+        ("remove",): [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
         ("exe|pip", "exe|python"): [Arg("vivenv", help="name/hash of vivenv")],
         ("list", "info"): [
             Arg(
@@ -1342,30 +1343,24 @@ class Cli:
             )
         ],
     }
-    cmds = (
-        "list",
-        (
-            "exe",
-            dict(
-                pip=dict(help="run cmd with pip"),
-                python=dict(help="run cmd with python"),
-            ),
+    cmds = {
+        "list": None,
+        "exe": dict(
+            pip=dict(help="run cmd with pip"),
+            python=dict(help="run cmd with python"),
         ),
-        "remove",
-        "freeze",
-        "info",
-        (
-            "manage",
-            dict(
-                show=dict(help="show current installation", aliases=["s"]),
-                install=dict(help="install fresh viv", aliases=["i"]),
-                update=dict(help="update viv version", aliases=["u"]),
-                purge=dict(help="remove traces of viv", aliases=["p"]),
-            ),
+        "remove": None,
+        "freeze": None,
+        "info": None,
+        "manage": dict(
+            show=dict(help="show current installation", aliases=["s"]),
+            install=dict(help="install fresh viv", aliases=["i"]),
+            update=dict(help="update viv version", aliases=["u"]),
+            purge=dict(help="remove traces of viv", aliases=["p"]),
         ),
-        "shim",
-        "run",
-    )
+        "shim": None,
+        "run": None,
+    }
 
     def __init__(self, viv: Viv) -> None:
         self.viv = viv
@@ -1375,7 +1370,7 @@ class Cli:
         self._add_args()
 
     def _cmd_arg_group_map(self) -> None:
-        self.cmd_arg_group_map = {}
+        self.cmd_arg_group_map: Dict[str, List[Sequence[str] | str]] = {}
         for grp in self.args:
             if isinstance(grp, str):
                 self.cmd_arg_group_map.setdefault(grp, []).append(grp)
@@ -1389,7 +1384,7 @@ class Cli:
     def _add_args(self) -> None:
         for grp, args in self.args.items():
             for arg in args:
-                self.parsers.get(grp).add_argument(*arg.args, **arg.kwargs)
+                self.parsers[grp].add_argument(*arg.args, **arg.kwargs)
 
     def _validate_args(self, args: Namespace) -> None:
         if args.func.__name__ in ("freeze", "shim", "run"):
@@ -1459,7 +1454,7 @@ class Cli:
 
         return parser
 
-    def run(self):
+    def run(self) -> None:
         self.parser.add_argument(
             "-V",
             "--version",
@@ -1471,9 +1466,8 @@ class Cli:
             metavar="<sub-cmd>", title="subcommands", required=True
         )
 
-        for cmd in self.cmds:
-            if isinstance(cmd, tuple):
-                cmd, subcmds = cmd
+        for cmd, subcmds in self.cmds.items():
+            if subcmds:
                 subcmd_p = self._get_subcmd_parser(cmd_p, cmd)
                 subcmd_cmd_p = subcmd_p.add_subparsers(
                     title="subcommand", metavar="<sub-cmd>", required=True
@@ -1482,7 +1476,7 @@ class Cli:
                     subcmd_cmd_p.add_parser(
                         subcmd,
                         parents=[
-                            self.parsers.get(k)
+                            self.parsers[k]
                             for k in self.cmd_arg_group_map[f"{cmd}|{subcmd}"]
                         ],
                         **kwargs,
