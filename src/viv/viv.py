@@ -51,7 +51,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-35-g9229337-dev"
+__version__ = "23.5a4-37-gf8ebd9d-dev"
 
 
 class Spinner:
@@ -813,6 +813,7 @@ def resolve_deps(args: Namespace) -> List[str]:
     cmd = [
         "pip",
         "install",
+        "--dry-run",
         "--quiet",
         "--ignore-installed",
         "--report",
