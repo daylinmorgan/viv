@@ -14,7 +14,6 @@ import itertools
 import json
 import os
 import re
-import shlex
 import shutil
 import site
 import subprocess
@@ -51,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-41-gf069eaf-dev"
+__version__ = "23.5a4-43-gcdeed9f-dev"
 
 
 class Spinner:
@@ -1018,22 +1017,23 @@ class Viv:
                 vivenv.show()
 
     def exe(self, args: Namespace) -> None:
-        """run python/pip in existing vivenv"""
+        """\
+        run binary/script in existing vivenv
+
+        examples:
+            viv exe <vivenv> pip -- list
+            viv exe <vivenv> python -- script.py
+        """
 
         vivenv = self._match_vivenv(args.vivenv)
+        bin = vivenv.path / "bin" / args.cmd
 
-        pip_path, python_path = (vivenv.path / "bin" / cmd for cmd in ("pip", "python"))
-        # todo check for vivenv
-        echo(f"executing command within {vivenv.name}")
+        if not bin.exists():
+            error(f"{args.cmd} does not exist in {vivenv.name}", code=1)
 
-        cmd = (
-            f"{pip_path} {' '.join(args.cmd)}"
-            if args.subcmd == "pip"
-            else f"{python_path} {' '.join(args.cmd)}"
-        ) + " ".join(args.rest)
+        cmd = [bin, *args.rest]
 
-        echo(f"executing {cmd}")
-        run(shlex.split(cmd), verbose=True)
+        run(cmd, verbose=True)
 
     def info(self, args: Namespace) -> None:
         """get metadata about a vivenv"""
@@ -1267,7 +1267,7 @@ class Cli:
             ),
         ],
         ("remove",): [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
-        ("exe|pip", "exe|python", "info"): [Arg("vivenv", help="name/hash of vivenv")],
+        ("exe", "info"): [Arg("vivenv", help="name/hash of vivenv")],
         ("list", "info"): [
             Arg(
                 "--json",
@@ -1339,11 +1339,10 @@ class Cli:
                 action="store_true",
             )
         ],
-        ("exe|python", "exe|pip"): [
+        ("exe"): [
             Arg(
                 "cmd",
                 help="command to to execute",
-                nargs="*",
             )
         ],
     }
@@ -1362,10 +1361,10 @@ class Cli:
         )
     ).update(
         {
-            "exe": dict(
-                pip=dict(help="run cmd with pip"),
-                python=dict(help="run cmd with python"),
-            ),
+            #     "exe": dict(
+            #         pip=dict(help="run cmd with pip"),
+            #         python=dict(help="run cmd with python"),
+            #     ),
             "manage": dict(
                 show=dict(help="show current installation", aliases=["s"]),
                 install=dict(help="install fresh viv", aliases=["i"]),
