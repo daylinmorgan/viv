@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-32-g2dd4b35-dev"
+__version__ = "23.5a4-33-g0996628-dev"
 
 
 class Spinner:
@@ -808,24 +808,23 @@ def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
 def resolve_deps(args: Namespace) -> List[str]:
     spec = combined_spec(args.reqs, args.requirements)
 
-    with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-        echo("generating frozen spec")
-        vivenv = ViVenv(spec, track_exe=False, path=Path(tmpdir))
-
-        vivenv.create(quiet=True)
-        # populate the environment for now use
-        # custom cmd since using requirements file
+    with Spinner("resolving depedencies"):
         cmd = [
-            str(vivenv.path / "bin" / "pip"),
+            "pip",
             "install",
-            "--force-reinstall",
+            "--quiet",
+            "--ignore-installed",
+            "--report",
+            "-",
         ] + spec
 
-        run(cmd, spinmsg="resolving dependencies", clean_up_path=vivenv.path)
+        report = json.loads(run(cmd, check_output=True))
+        resolved_spec = [
+            f"{pkg['metadata']['name']}=={pkg['metadata']['version']}"
+            for pkg in report["install"]
+        ]
 
-        cmd = [str(vivenv.path / "bin" / "pip"), "freeze"]
-        resolved_spec = run(cmd, check_output=True)
-    return resolved_spec.splitlines()
+    return resolved_spec
 
 
 def fetch_source(reference: str) -> str:
