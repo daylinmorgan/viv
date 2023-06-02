@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a4-30-g3cf2dce-dev"
+__version__ = "23.5a4-32-g2dd4b35-dev"
 
 
 class Spinner:
@@ -218,7 +218,7 @@ to create/activate a vivenv:
     _id = sha256.hexdigest()
     if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.EnvBuilder(with_pip=True, clear=True).create(env)
+        venv.create(env, symlinks=True, with_pip=True, clear=True).create(env)
         (env / "pip.conf").write_text("[global]\ndisable-pip-version-check=true")
         run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
         p = run([env / "bin" / "pip", "install", "--force-reinstall", *spec], **run_kw)
@@ -688,12 +688,12 @@ class ViVenv:
         if not quiet:
             echo(f"new unique vivenv -> {self.name}")
         with Spinner("creating vivenv"):
-            builder = venv.EnvBuilder(with_pip=True, clear=True)
-            builder.create(self.path)
+            venv.create(self.path, with_pip=True, clear=True, symlinks=True)
 
             # add config to ignore pip version
-            with (self.path / "pip.conf").open("w") as f:
-                f.write("[global]\ndisable-pip-version-check = true")
+            (self.path / "pip.conf").write_text(
+                "[global]\ndisable-pip-version-check = true"
+            )
 
         self.meta.created = str(datetime.today())
 
