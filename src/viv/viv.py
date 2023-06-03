@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-2-ge70afb3-dev"
+__version__ = "23.5a5-3-g2bc2476-dev"
 
 
 class Spinner:
@@ -221,8 +221,7 @@ to create/activate a vivenv:
     _id = sha256.hexdigest()
     if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.create(env, symlinks=True, with_pip=True, clear=True)
-        (env / "pip.conf").write_text("[global]\ndisable-pip-version-check=true")
+        venv.create(env, symlinks=True, with_pip=True, clear=True, upgrade_deps=True)
         run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
         p = run([env / "bin" / "pip", "install", "--force-reinstall", *spec], **run_kw)
         if (rc := p.returncode) != 0:
@@ -697,11 +696,8 @@ class ViVenv:
         if not quiet:
             echo(f"new unique vivenv -> {self.name}")
         with Spinner("creating vivenv"):
-            venv.create(self.path, with_pip=True, clear=True, symlinks=True)
-
-            # add config to ignore pip version
-            (self.path / "pip.conf").write_text(
-                "[global]\ndisable-pip-version-check = true"
+            venv.create(
+                self.path, with_pip=True, clear=True, symlinks=True, upgrade_deps=True
             )
 
         self.meta.created = str(datetime.today())
