@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-3-g2bc2476-dev"
+__version__ = "23.5a5-4-g6e173b2-dev"
 
 
 class Spinner:
@@ -352,7 +352,7 @@ if __name__ == "__main__":
                     ("CLI", cli),
                     ("Running Source", running),
                     ("Local Source", local),
-                    ("Cache", c._cache),
+                    ("Cache", Cfg._cache),
                 )
             )
             + "\n"
@@ -617,7 +617,7 @@ class Meta:
 
     @classmethod
     def load(cls, name: str) -> "Meta":
-        if not (c.venvcache / name / "vivmeta.json").exists():
+        if not (Cfg.venvcache / "vivmeta.json").exists():
             warn(f"possibly corrupted vivenv: {name}")
             # add empty values for corrupted vivenvs so it will still load
             return cls(name=name, spec=[""], files=[""], exe="", id="")
@@ -778,7 +778,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
         name: use as vivenv name, if not provided id is used
     """
 
-    vivenv = ViVenv(list(packages), track_exe=track_exe, name=name)
+    vivenv = ViVenv([*list(packages), *c.viv_spec], track_exe=track_exe, name=name)
     if not vivenv.loaded or os.getenv("VIV_FORCE"):
         vivenv.create()
         vivenv.install_pkgs()
@@ -871,18 +871,26 @@ def make_executable(path: Path) -> None:
     os.chmod(path, mode)
 
 
-class Config:
+class Cfg:
     """viv config manager"""
 
-    def __init__(self) -> None:
-        self._cache = Path(
-            os.getenv(
-                "VIV_CACHE",
-                Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv",
-            )
+    _cache = Path(
+        os.getenv(
+            "VIV_CACHE",
+            Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv",
         )
+    )
 
-    def _ensure(self, p: Path) -> Path:
+    @property
+    def viv_spec(self) -> List[str]:
+        env_viv_spec = os.getenv("VIV_SPEC")
+        if env_viv_spec:
+            return env_viv_spec.split(" ")
+        else:
+            return []
+
+    @staticmethod
+    def _ensure(p: Path) -> Path:
         p.mkdir(parents=True, exist_ok=True)
         return p
 
@@ -908,7 +916,7 @@ class Config:
         return self._ensure(parent) / "viv.py"
 
 
-c = Config()
+c = Cfg()
 
 
 class Viv:
@@ -1058,7 +1066,7 @@ class Viv:
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         echo("updating local source copy of viv")
-        shutil.copy(c.srccache / f"{sha256}.py", src)
+        shutil.copy(Cfg.srccache / f"{sha256}.py", src)
         make_executable(src)
         echo("symlinking cli")
 
@@ -1077,7 +1085,7 @@ class Viv:
         )
 
     def _get_new_version(self, ref: str) -> Tuple[str, str]:
-        sys.path.append(str(c.srccache))
+        sys.path.append(str(Cfg.srccache))
         return (sha256 := fetch_source(ref)), __import__(sha256).__version__
 
     def manage(self, args: Namespace) -> None:
@@ -1137,11 +1145,11 @@ class Viv:
 
         elif args.subcmd == "purge":
             to_remove = []
-            if c._cache.is_dir():
-                to_remove.append(c._cache)
+            if Cfg._cache.is_dir():
+                to_remove.append(Cfg._cache)
             if args.src.is_file():
                 to_remove.append(
-                    args.src.parent if args.src == c.srcdefault else args.src
+                    args.src.parent if args.src == Cfg.srcdefault else args.src
                 )
             if self.local_source and self.local_source.is_file():
                 if self.local_source.parent.name == "viv":
@@ -1183,7 +1191,7 @@ class Viv:
         """
         default_bin, bin = self._pick_bin(args)
         output = (
-            c.binparent / default_bin if not args.output else args.output.absolute()
+            Cfg.binparent / default_bin if not args.output else args.output.absolute()
         )
 
         if output.is_file():
@@ -1362,7 +1370,7 @@ class Cli:
                 "-s",
                 "--src",
                 help="path/to/source_file",
-                default=c.srcdefault,
+                default=Cfg.srcdefault,
                 metavar="<src>",
             ),
             Arg(
