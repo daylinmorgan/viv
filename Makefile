@@ -20,7 +20,7 @@ venv: ## generate environment
 
 .PHONY: dev-install
 dev-install:
-	ln -sf $(PWD)/srv/viv/viv.py ~/.local/share/viv/viv.py
+	ln -sf $(PWD)/src/viv/viv.py ~/.local/share/viv/viv.py
 
 docs: docs/index.md docs/viv.py ## build docs
 	mkdocs build

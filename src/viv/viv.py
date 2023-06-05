@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-5-g2864f50-dev"
+__version__ = "23.5a5-7-g6bf9a91-dev"
 
 
 class Spinner:
@@ -125,11 +125,29 @@ class Env:
 
     @property
     def _viv_cache(self) -> Path:
-        return os.getenv("VIV_CACHE") or (Path(self.xdg_cache_home) / "viv")
+        return Path(os.getenv("VIV_CACHE", (Path(self.xdg_cache_home) / "viv")))
 
     @property
     def _viv_spec(self) -> List[str]:
         return filter(None, os.getenv("VIV_SPEC", "").split(" "))
+
+
+class Cache:
+    def __init__(self):
+        self.base = Env().viv_cache
+
+    @staticmethod
+    def _ensure(p: Path) -> Path:
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    @property
+    def src(self) -> Path:
+        return self._ensure(self.base / "src")
+
+    @property
+    def venv(self) -> Path:
+        return self._ensure(self.base / "venvs")
 
 
 class Cfg:
@@ -899,26 +917,18 @@ def make_executable(path: Path) -> None:
     os.chmod(path, mode)
 
 
-def ensure(d: Path) -> Path:
-    d.mkdir(exist_ok=True, parents=True)
-    return d
-
-
-class Cache:
-    base = Env().viv_cache
-
-    @staticmethod
-    def _ensure(p: Path) -> Path:
-        p.mkdir(parents=True, exist_ok=True)
-        return p
-
-    @property
-    def src(self) -> Path:
-        return self._ensure(self.base / "src")
-
-    @property
-    def venv(self) -> Path:
-        return self._ensure(self.base / "venvs")
+def uses_viv(txt: str) -> bool:
+    return re.search(
+        """
+            \s*__import__\(\s*["']viv["']\s*\).use\(.*
+            |
+            from\ viv\ import\ use
+            |
+            import\ viv 
+        """,
+        txt,
+        re.VERBOSE,
+    )
 
 
 class Viv:
@@ -1227,10 +1237,13 @@ class Viv:
           viv r -s <remote python script>
         """
 
+        spec = combined_spec(args.reqs, args.requirements)
+
         if args.script:
             env = os.environ
             name = args.script.split("/")[-1]
 
+            # TODO: reduce boilerplate and dry out
             with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                 tmppath = Path(tmpdir)
                 script = tmppath / name
@@ -1240,19 +1253,39 @@ class Viv:
                             "https://raw.githubusercontent.com/daylinmorgan/viv/script-runner/src/viv/viv.py"
                         )
                     )
+                script_text = fetch_script(args.script)
+                viv_used = uses_viv(script_text)
+                script.write_text(script_text)
 
-                script.write_text(fetch_script(args.script))
                 if not args.keep:
                     env.update({"VIV_CACHE": tmpdir})
+                    os.environ["VIV_CACHE"] = tmpdir
 
-                sys.exit(
-                    subprocess.run(
-                        [sys.executable, script, *args.rest], env=env
-                    ).returncode
-                )
+                if viv_used:
+                    env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
+
+                    sys.exit(
+                        subprocess.run(
+                            [sys.executable, script, *args.rest], env=env
+                        ).returncode
+                    )
+                else:
+                    vivenv = ViVenv(spec)
+                    if not vivenv.loaded or Env().viv_force:
+                        vivenv.create()
+                        vivenv.install_pkgs()
+
+                    vivenv.touch()
+                    vivenv.meta.write()
+
+                    sys.exit(
+                        subprocess.run(
+                            [vivenv.path / "bin" / "python", script, *args.rest]
+                        ).returncode
+                    )
+
         else:
             _, bin = self._pick_bin(args)
-            spec = combined_spec(args.reqs, args.requirements)
             vivenv = ViVenv(spec)
 
             # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
@@ -1499,11 +1532,6 @@ class Cli:
         if args.func.__name__ == "run":
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script", code=1)
-            if args.script and args.reqs:
-                error(
-                    "script mode does not support additional requirements currently",
-                    code=1,
-                )
 
     def _get_subcmd_parser(
         self,
