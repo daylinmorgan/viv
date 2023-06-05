@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-18-g4641bbb-dev"
+__version__ = "23.5a5-19-g93fd53e-dev"
 
 
 class Spinner:
@@ -279,8 +279,8 @@ class Template:
         meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
 
     (env / "vivmeta.json").write_text(json.dumps(meta))
-    sys.path = [p for p in (str(env.path),*sys.path) if p != site.USER_SITE]
-    site.addsitedir(str(*(env / "lib").glob("py*/si*")))
+    site.addsitedir(sitepkgs:=str(*(env / "lib").glob("py*/si*")))
+    sys.path = [p for p in (sitepkgs,*sys.path) if p != site.USER_SITE]
     return env
 """
 
