@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-10-g5326324-dev"
+__version__ = "23.5a5-9-g33e2ff5-dev"
 
 
 class Spinner:
@@ -118,7 +118,10 @@ class Env:
     )
 
     def __getattr__(self, attr: str) -> Any:
-        if not attr.startswith("_") and (defined:=getattr(self, f"_{attr}")) is not None:
+        if (
+            not attr.startswith("_")
+            and (defined := getattr(self, f"_{attr}")) is not None
+        ):
             return defined
         else:
             return os.getenv(attr.upper(), self.defaults.get(attr))
@@ -130,6 +133,7 @@ class Env:
     @property
     def _viv_spec(self) -> List[str]:
         return [i for i in os.getenv("VIV_SPEC", "").split(" ") if i]
+
 
 class Cache:
     def __init__(self) -> None:
@@ -268,9 +272,10 @@ to create/activate a vivenv:
     _id = sha256.hexdigest()
     if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.create(env, symlinks=True, with_pip=True, clear=True, upgrade_deps=True)
-        run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
-        p = run([env / "bin" / "pip", "install", "--force-reinstall", *spec], **run_kw)
+        venv.create(env, symlinks=True, clear=True)
+        kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
+        cmd = ["pip", "--python", str(env / "bin" / "python"), "install", *spec]
+        p = run(cmd, **kw)
         if (rc := p.returncode) != 0:
             if env.is_dir():
                 shutil.rmtree(env)
@@ -744,14 +749,18 @@ class ViVenv:
             echo(f"new unique vivenv -> {self.name}")
         with Spinner("creating vivenv"):
             venv.create(
-                self.path, with_pip=True, clear=True, symlinks=True, upgrade_deps=True
+                self.path,
+                clear=True,
+                symlinks=True,
             )
 
         self.meta.created = str(datetime.today())
 
     def install_pkgs(self) -> None:
         cmd: List[str] = [
-            str(self.path / "bin" / "pip"),
+            "pip",
+            "--python",
+            str(self.path / "bin" / "python"),
             "install",
             "--force-reinstall",
         ] + self.meta.spec
@@ -1061,8 +1070,8 @@ class Viv:
         run binary/script in existing vivenv
 
         examples:
-            viv exe <vivenv> pip -- list
             viv exe <vivenv> python -- script.py
+            viv exe <vivenv> python -- -m http.server
         """
 
         vivenv = self._match_vivenv(vivenv_id)
@@ -1426,13 +1435,15 @@ class Cli:
                 action="store_true",
             ),
         ],
-        ("run", "freeze", "shim"): [
+        ("run", "shim"): [
             Arg(
                 "-k",
                 "--keep",
                 help="preserve environment",
                 action="store_true",
             ),
+        ],
+        ("run", "freeze", "shim"): [
             Arg("reqs", help="requirements specifiers", nargs="*"),
             Arg(
                 "-r",
