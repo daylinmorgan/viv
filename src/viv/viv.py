@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-9-g33e2ff5-dev"
+__version__ = "23.5a5-11-g92da092-dev"
 
 
 class Spinner:
@@ -1435,14 +1435,6 @@ class Cli:
                 action="store_true",
             ),
         ],
-        ("run", "shim"): [
-            Arg(
-                "-k",
-                "--keep",
-                help="preserve environment",
-                action="store_true",
-            ),
-        ],
         ("run", "freeze", "shim"): [
             Arg("reqs", help="requirements specifiers", nargs="*"),
             Arg(
@@ -1454,6 +1446,12 @@ class Cli:
             ),
         ],
         ("run", "shim"): [
+            Arg(
+                "-k",
+                "--keep",
+                help="preserve environment",
+                action="store_true",
+            ),
             Arg("-b", "--bin", help="console_script/script to invoke", metavar="<bin>"),
         ],
         ("manage|purge", "manage|update", "manage|install"): [
