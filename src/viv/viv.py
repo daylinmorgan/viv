@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-7-g6bf9a91-dev"
+__version__ = "23.5a5-10-g5326324-dev"
 
 
 class Spinner:
@@ -117,7 +117,7 @@ class Env:
         xdg_data_home=Path.home() / ".local" / "share",
     )
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         if not attr.startswith("_") and (defined := getattr(self, f"_{attr}")):
             return defined
         else:
@@ -129,11 +129,11 @@ class Env:
 
     @property
     def _viv_spec(self) -> List[str]:
-        return filter(None, os.getenv("VIV_SPEC", "").split(" "))
+        return [i for i in os.getenv("VIV_SPEC", "").split(" ") if i]
 
 
 class Cache:
-    def __init__(self):
+    def __init__(self) -> None:
         self.base = Env().viv_cache
 
     @staticmethod
@@ -153,7 +153,9 @@ class Cache:
 class Cfg:
     @property
     def src(self) -> Path:
-        return Path(Env().xdg_data_home) / "viv" / "viv.py"
+        p = Path(Env().xdg_data_home) / "viv" / "viv.py"
+        p.parent.mkdir(exist_ok=True, parents=True)
+        return p
 
 
 class Ansi:
@@ -856,8 +858,8 @@ def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
     return reqs
 
 
-def resolve_deps(args: Namespace) -> List[str]:
-    spec = combined_spec(args.reqs, args.requirements)
+def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
+    spec = combined_spec(reqs, requirements)
 
     cmd = [
         "pip",
@@ -918,16 +920,18 @@ def make_executable(path: Path) -> None:
 
 
 def uses_viv(txt: str) -> bool:
-    return re.search(
-        """
+    return bool(
+        re.search(
+            """
             \s*__import__\(\s*["']viv["']\s*\).use\(.*
             |
             from\ viv\ import\ use
             |
             import\ viv 
         """,
-        txt,
-        re.VERBOSE,
+            txt,
+            re.VERBOSE,
+        )
     )
 
 
@@ -979,7 +983,7 @@ class Viv:
         else:
             error(f"no matches found for {name_id}", code=1)
 
-    def remove(self, args: Namespace) -> None:
+    def remove(self, vivenvs: List[str]) -> None:
         """\
         remove a vivenv
 
@@ -987,7 +991,7 @@ class Viv:
         `viv rm $(viv l -q)`
         """
 
-        for name in args.vivenv:
+        for name in vivenvs:
             vivenv = self._match_vivenv(name)
             if vivenv.path.is_dir():
                 echo(f"removing {vivenv.name}")
@@ -998,11 +1002,19 @@ class Viv:
                     code=1,
                 )
 
-    def freeze(self, args: Namespace) -> None:
+    def freeze(
+        self,
+        reqs: List[str],
+        requirements: Path,
+        keep: bool,
+        standalone: bool,
+        path: str,
+        args: Namespace,
+    ) -> None:
         """create import statement from package spec"""
 
-        spec = resolve_deps(args)
-        if args.keep:
+        spec = resolve_deps(reqs, requirements)
+        if keep:
             # re-create env again since path's are hard-coded
             vivenv = ViVenv(spec)
 
@@ -1018,26 +1030,26 @@ class Viv:
 
         echo("see below for import statements\n")
 
-        if args.standalone:
+        if standalone:
             sys.stdout.write(t.standalone(spec))
             return
 
-        if args.path and not self.local_source:
+        if path and not self.local_source:
             error("No local viv found to import from", code=1)
 
-        sys.stdout.write(t.frozen_import(args.path, self.local_source, spec))
+        sys.stdout.write(t.frozen_import(path, self.local_source, spec))
 
-    def list(self, args: Namespace) -> None:
+    def list(self, quiet: bool, full: bool, use_json: bool) -> None:
         """list all vivenvs"""
 
-        if args.quiet:
+        if quiet:
             sys.stdout.write("\n".join(self.vivenvs) + "\n")
         elif len(self.vivenvs) == 0:
             echo("no vivenvs setup")
-        elif args.full:
+        elif full:
             for _, vivenv in self.vivenvs.items():
                 vivenv.tree()
-        elif args.json:
+        elif use_json:
             sys.stdout.write(
                 json.dumps({k: v.meta.__dict__ for k, v in self.vivenvs.items()})
             )
@@ -1045,7 +1057,7 @@ class Viv:
             for _, vivenv in self.vivenvs.items():
                 vivenv.show()
 
-    def exe(self, args: Namespace) -> None:
+    def exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
         """\
         run binary/script in existing vivenv
 
@@ -1054,31 +1066,31 @@ class Viv:
             viv exe <vivenv> python -- script.py
         """
 
-        vivenv = self._match_vivenv(args.vivenv)
-        bin = vivenv.path / "bin" / args.cmd
+        vivenv = self._match_vivenv(vivenv_id)
+        bin = vivenv.path / "bin" / cmd
 
         if not bin.exists():
-            error(f"{args.cmd} does not exist in {vivenv.name}", code=1)
+            error(f"{cmd} does not exist in {vivenv.name}", code=1)
 
-        cmd = [bin, *args.rest]
+        full_cmd = [str(bin), *rest]
 
-        run(cmd, verbose=True)
+        run(full_cmd, verbose=True)
 
-    def info(self, args: Namespace) -> None:
+    def info(self, vivenv_id: str, use_json: bool) -> None:
         """get metadata about a vivenv"""
-        vivenv = self._match_vivenv(args.vivenv)
+        vivenv = self._match_vivenv(vivenv_id)
         metadata_file = vivenv.path / "vivmeta.json"
 
         if not metadata_file.is_file():
-            error(f"Unable to find metadata for vivenv: {args.vivenv}", code=1)
-        if args.json:
+            error(f"Unable to find metadata for vivenv: {vivenv_id}", code=1)
+        if use_json:
             sys.stdout.write(json.dumps(vivenv.meta.__dict__))
         else:
             vivenv.tree()
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         echo("updating local source copy of viv")
-        shutil.copy(Cache.src / f"{sha256}.py", src)
+        shutil.copy(Cache().src / f"{sha256}.py", src)
         make_executable(src)
         echo("symlinking cli")
 
@@ -1097,103 +1109,133 @@ class Viv:
         )
 
     def _get_new_version(self, ref: str) -> Tuple[str, str]:
-        sys.path.append(str(Cache.src))
+        sys.path.append(str(Cache().src))
         return (sha256 := fetch_source(ref)), __import__(sha256).__version__
 
-    def manage(self, args: Namespace) -> None:
+    def manage(self) -> None:
         """manage viv itself"""
 
-        if args.subcmd == "show":
-            if args.pythonpath:
-                if self.local and self.local_source:
-                    sys.stdout.write(str(self.local_source.parent) + "\n")
-                else:
-                    error("expected to find a local installation", code=1)
+    def manage_show(
+        self,
+        pythonpath: bool = False,
+    ) -> None:
+        """manage viv itself"""
+        if pythonpath:
+            if self.local and self.local_source:
+                sys.stdout.write(str(self.local_source.parent) + "\n")
             else:
-                echo("Current:")
-                sys.stderr.write(
-                    t.show(
-                        cli=shutil.which("viv"),
-                        running=self.running_source,
-                        local=self.local_source,
-                    )
+                error("expected to find a local installation", code=1)
+        else:
+            echo("Current:")
+            sys.stderr.write(
+                t.show(
+                    cli=shutil.which("viv"),
+                    running=self.running_source,
+                    local=self.local_source,
                 )
+            )
 
-        elif args.subcmd == "update":
-            sha256, next_version = self._get_new_version(args.ref)
+    def manage_update(
+        self,
+        ref: str,
+        src: Path,
+        cli: Path,
+        yes: bool,
+    ) -> None:
+        sha256, next_version = self._get_new_version(ref)
 
-            if self.local_version == next_version:
-                echo(f"no change between {args.ref} and local version")
-                sys.exit(0)
+        if self.local_version == next_version:
+            echo(f"no change between {ref} and local version")
+            sys.exit(0)
 
-            if confirm(
-                "Would you like to perform the above installation steps?",
-                t.update(self.local_source, args.cli, self.local_version, next_version),
-                yes=args.yes,
-            ):
-                self._install_local_src(
-                    sha256,
-                    Path(
-                        args.src if not self.local_source else self.local_source,
-                    ),
-                    args.cli,
-                    args.yes,
-                )
+        if confirm(
+            "Would you like to perform the above installation steps?",
+            t.update(self.local_source, cli, self.local_version, next_version),
+            yes=yes,
+        ):
+            self._install_local_src(
+                sha256,
+                Path(
+                    src if not self.local_source else self.local_source,
+                ),
+                cli,
+                yes,
+            )
 
-        elif args.subcmd == "install":
-            sha256, downloaded_version = self._get_new_version(args.ref)
+    def manage_install(
+        self,
+        ref: str,
+        src: Path,
+        cli: Path,
+        yes: bool,
+    ) -> None:
+        sha256, downloaded_version = self._get_new_version(ref)
 
-            echo(f"Downloaded version: {downloaded_version}")
+        echo(f"Downloaded version: {downloaded_version}")
 
-            # TODO: see if file is actually where
-            # we are about to install and give more instructions
+        # TODO: see if file is actually where
+        # we are about to install and give more instructions
 
-            if confirm(
-                "Would you like to perform the above installation steps?",
-                t.install(args.src, args.cli),
-                yes=args.yes,
-            ):
-                self._install_local_src(sha256, args.src, args.cli)
+        if confirm(
+            "Would you like to perform the above installation steps?",
+            t.install(src, cli),
+            yes=yes,
+        ):
+            self._install_local_src(sha256, src, cli, yes)
 
-        elif args.subcmd == "purge":
-            to_remove = []
-            if Cache.base.is_dir():
-                to_remove.append(Cache.base)
-            if args.src.is_file():
-                to_remove.append(
-                    args.src.parent if args.src == (Cfg().src) else args.src
-                )
-            if self.local_source and self.local_source.is_file():
-                if self.local_source.parent.name == "viv":
-                    to_remove.append(self.local_source.parent)
+    def manage_purge(
+        self,
+        ref: str,
+        src: Path,
+        cli: Path,
+        yes: bool,
+    ) -> None:
+        to_remove = []
+        if Cache().base.is_dir():
+            to_remove.append(Cache().base)
+        if src.is_file():
+            to_remove.append(src.parent if src == (Cfg().src) else src)
+        if self.local_source and self.local_source.is_file():
+            if self.local_source.parent.name == "viv":
+                to_remove.append(self.local_source.parent)
+            else:
+                to_remove.append(self.local_source)
+
+        if cli.is_file():
+            to_remove.append(cli)
+
+        to_remove = list(set(to_remove))
+        if confirm(
+            "Remove the above files/directories?",
+            "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
+            yes=yes,
+        ):
+            for p in to_remove:
+                if p.is_dir():
+                    shutil.rmtree(p)
                 else:
-                    to_remove.append(self.local_source)
+                    p.unlink()
 
-            if args.cli.is_file():
-                to_remove.append(args.cli)
+            echo(
+                "to re-install use: "
+                "`python3 <(curl -fsSL viv.dayl.in/viv.py) manage install`"
+            )
 
-            to_remove = list(set(to_remove))
-            if confirm(
-                "Remove the above files/directories?",
-                "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
-                yes=args.yes,
-            ):
-                for p in to_remove:
-                    if p.is_dir():
-                        shutil.rmtree(p)
-                    else:
-                        p.unlink()
+    def _pick_bin(self, reqs: List[str], bin: str) -> Tuple[str, str]:
+        default = re.split(r"[=><~!*]+", reqs[0])[0]
+        return default, (default if not bin else bin)
 
-                echo(
-                    "to re-install use: "
-                    "`python3 <(curl -fsSL viv.dayl.in/viv.py) manage install`"
-                )
-
-    def _pick_bin(self, args: Namespace) -> Tuple[str, str]:
-        default = re.split(r"[=><~!*]+", args.reqs[0])[0]
-        return default, (default if not args.bin else args.bin)
-
-    def shim(self, args: Namespace) -> None:
+    def shim(
+        self,
+        reqs: List[str],
+        requirements: Path,
+        bin: str,
+        output: Path,
+        freeze: bool,
+        yes: bool,
+        path: str,
+        standalone: bool,
+    ) -> None:
         """\
         generate viv-powered cli apps
 
@@ -1201,33 +1243,35 @@ class Viv:
           viv shim black
           viv shim yartsu -o ~/bin/yartsu --standalone
         """
-        default_bin, bin = self._pick_bin(args)
-        output = (
-            Env().viv_bin_dir / default_bin
-            if not args.output
-            else args.output.absolute()
-        )
+        default_bin, bin = self._pick_bin(reqs, bin)
+        output = Env().viv_bin_dir / default_bin if not output else output.absolute()
 
         if output.is_file():
             error(f"{output} already exists...exiting", code=1)
 
-        if args.freeze:
-            spec = resolve_deps(args)
+        if freeze:
+            spec = resolve_deps(reqs, requirements)
         else:
-            spec = combined_spec(args.reqs, args.requirements)
+            spec = combined_spec(reqs, requirements)
 
         if confirm(
-            f"Write shim for {a.style(bin,'bold')} to {a.style(output,'green')}?",
-            yes=args.yes,
+            f"Write shim for {a.bold}{bin}{a.end} to {a.green}{output}{a.end}?",
+            yes=yes,
         ):
             with output.open("w") as f:
-                f.write(
-                    t.shim(args.path, self.local_source, args.standalone, spec, bin)
-                )
+                f.write(t.shim(path, self.local_source, standalone, spec, bin))
 
             make_executable(output)
 
-    def run(self, args: Namespace) -> None:
+    def run(
+        self,
+        reqs: List[str],
+        requirements: Path,
+        script: str,
+        keep: bool,
+        rest: List[str],
+        bin: str,
+    ) -> None:
         """\
         run an app/script with an on-demand venv
 
@@ -1237,27 +1281,28 @@ class Viv:
           viv r -s <remote python script>
         """
 
-        spec = combined_spec(args.reqs, args.requirements)
+        spec = combined_spec(reqs, requirements)
 
-        if args.script:
+        if script:
             env = os.environ
-            name = args.script.split("/")[-1]
+            name = script.split("/")[-1]
 
             # TODO: reduce boilerplate and dry out
             with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                 tmppath = Path(tmpdir)
-                script = tmppath / name
+                scriptpath = tmppath / name
                 if not self.local_source:
                     (tmppath / "viv.py").write_text(
+                        # TODO: use latest tag once ready
                         fetch_script(
                             "https://raw.githubusercontent.com/daylinmorgan/viv/script-runner/src/viv/viv.py"
                         )
                     )
-                script_text = fetch_script(args.script)
+                script_text = fetch_script(script)
                 viv_used = uses_viv(script_text)
-                script.write_text(script_text)
+                scriptpath.write_text(script_text)
 
-                if not args.keep:
+                if not keep:
                     env.update({"VIV_CACHE": tmpdir})
                     os.environ["VIV_CACHE"] = tmpdir
 
@@ -1266,7 +1311,7 @@ class Viv:
 
                     sys.exit(
                         subprocess.run(
-                            [sys.executable, script, *args.rest], env=env
+                            [sys.executable, scriptpath, *rest], env=env
                         ).returncode
                     )
                 else:
@@ -1280,12 +1325,12 @@ class Viv:
 
                     sys.exit(
                         subprocess.run(
-                            [vivenv.path / "bin" / "python", script, *args.rest]
+                            [vivenv.path / "bin" / "python", script, *rest]
                         ).returncode
                     )
 
         else:
-            _, bin = self._pick_bin(args)
+            _, bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
 
             # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
@@ -1293,14 +1338,14 @@ class Viv:
             # persist (use c.cache)
 
             if not vivenv.loaded or Env().viv_force:
-                if not args.keep:
+                if not keep:
                     with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                         vivenv.path = Path(tmpdir)
                         vivenv.create()
                         vivenv.install_pkgs()
                         sys.exit(
                             subprocess.run(
-                                [vivenv.path / "bin" / bin, *args.rest]
+                                [vivenv.path / "bin" / bin, *rest]
                             ).returncode
                         )
                 else:
@@ -1310,7 +1355,7 @@ class Viv:
             vivenv.touch()
             vivenv.meta.write()
 
-            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *args.rest]).returncode)
+            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode)
 
 
 class Arg:
@@ -1350,17 +1395,22 @@ class Cli:
                 metavar="<path>",
             ),
         ],
-        ("remove",): [Arg("vivenv", help="name/hash of vivenv", nargs="*")],
+        ("remove",): [
+            Arg("vivenvs", help="name/hash of vivenv", nargs="*", metavar="vivenv")
+        ],
         ("run",): [
             Arg("-s", "--script", help="remote script to run", metavar="<script>")
         ],
-        ("exe", "info"): [Arg("vivenv", help="name/hash of vivenv")],
+        ("exe", "info"): [
+            Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
+        ],
         ("list", "info"): [
             Arg(
                 "--json",
                 help="name:metadata json for vivenvs ",
                 action="store_true",
                 default=False,
+                dest="use_json",
             )
         ],
         ("freeze", "shim"): [
@@ -1390,6 +1440,7 @@ class Cli:
                 "--requirements",
                 help="path/to/requirements.txt file",
                 metavar="<path>",
+                type=Path,
             ),
         ],
         ("run", "shim"): [
@@ -1467,7 +1518,7 @@ class Cli:
         self.viv = viv
         self.parser = ArgumentParser(prog=viv.name, description=t.description)
         self._cmd_arg_group_map()
-        self._make_parsers()
+        self.parsers = self._make_parsers()
         self._add_args()
 
     def _cmd_arg_group_map(self) -> None:
@@ -1479,8 +1530,8 @@ class Cli:
                 for cmd in grp:
                     self.cmd_arg_group_map.setdefault(cmd, []).append(grp)
 
-    def _make_parsers(self) -> None:
-        self.parsers = {**{grp: ArgumentParser(add_help=False) for grp in self.args}}
+    def _make_parsers(self) -> Dict[Sequence[str] | str, ArgumentParser]:
+        return {**{grp: ArgumentParser(add_help=False) for grp in self.args}}
 
     def _add_args(self) -> None:
         for grp, args in self.args.items():
@@ -1505,30 +1556,30 @@ class Cli:
             if args.path and args.standalone:
                 error("-p/--path and -s/--standalone are mutually exclusive", code=1)
 
-        if args.func.__name__ == "manage":
-            if args.subcmd == "install" and self.viv.local_source:
-                error(f"found existing viv installation at {self.viv.local_source}")
-                echo(
-                    "use "
-                    + a.style("viv manage update", "bold")
-                    + " to modify current installation.",
-                    style="red",
-                )
-                sys.exit(1)
-            if args.subcmd == "update":
-                if not self.viv.local_source:
-                    error(
-                        a.style("viv manage update", "bold")
-                        + " should be used with an exisiting installation",
-                        1,
-                    )
+        if args.func.__name__ == "manage_install" and self.viv.local_source:
+            error(f"found existing viv installation at {self.viv.local_source}")
+            echo(
+                "use "
+                + a.style("viv manage update", "bold")
+                + " to modify current installation.",
+                style="red",
+            )
+            sys.exit(1)
 
-                if self.viv.git:
-                    error(
-                        a.style("viv manage update", "bold")
-                        + " shouldn't be used with a git-based installation",
-                        1,
-                    )
+        if args.func.__name__ == "manage_update":
+            if not self.viv.local_source:
+                error(
+                    a.style("viv manage update", "bold")
+                    + " should be used with an exisiting installation",
+                    1,
+                )
+
+            if self.viv.git:
+                error(
+                    a.style("viv manage update", "bold")
+                    + " shouldn't be used with a git-based installation",
+                    1,
+                )
         if args.func.__name__ == "run":
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script", code=1)
@@ -1584,7 +1635,8 @@ class Cli:
                             for k in self.cmd_arg_group_map[f"{cmd}|{subcmd}"]
                         ],
                         **kwargs,
-                    ).set_defaults(func=getattr(self.viv, cmd), subcmd=subcmd)
+                        # ).set_defaults(func=getattr(self.viv, cmd), subcmd=subcmd)
+                    ).set_defaults(func=getattr(self.viv, f"{cmd}_{subcmd}"))
 
             else:
                 self._get_subcmd_parser(
@@ -1599,11 +1651,13 @@ class Cli:
             args.rest = sys.argv[i + 1 :]
         else:
             args = self.parser.parse_args()
-            args.rest = []
+            if args.func.__name__ in ("run", "exe"):
+                args.rest = []
 
         self._validate_args(args)
-        args.func(
-            args,
+        func = args.__dict__.pop("func")
+        func(
+            **vars(args),
         )
 
 
