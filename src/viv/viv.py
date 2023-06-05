@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-13-ge151534-dev"
+__version__ = "23.5a5-14-g895d881-dev"
 
 
 class Spinner:
@@ -1027,7 +1027,6 @@ class Viv:
         keep: bool,
         standalone: bool,
         path: str,
-        args: Namespace,
     ) -> None:
         """create import statement from package spec"""
 
