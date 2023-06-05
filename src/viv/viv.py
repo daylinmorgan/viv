@@ -118,7 +118,7 @@ class Env:
     )
 
     def __getattr__(self, attr: str) -> Any:
-        if not attr.startswith("_") and (defined := getattr(self, f"_{attr}")):
+        if not attr.startswith("_") and (defined:=getattr(self, f"_{attr}")) is not None:
             return defined
         else:
             return os.getenv(attr.upper(), self.defaults.get(attr))
@@ -130,7 +130,6 @@ class Env:
     @property
     def _viv_spec(self) -> List[str]:
         return [i for i in os.getenv("VIV_SPEC", "").split(" ") if i]
-
 
 class Cache:
     def __init__(self) -> None:
