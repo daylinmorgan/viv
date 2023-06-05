@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-4-g6e173b2-dev"
+__version__ = "23.5a5-5-g2864f50-dev"
 
 
 class Spinner:
@@ -110,6 +110,34 @@ class Spinner:
             sys.stderr.write("\r")
 
 
+class Env:
+    defaults = dict(
+        viv_bin_dir=Path.home() / ".local" / "bin",
+        xdg_cache_home=Path.home() / ".cache",
+        xdg_data_home=Path.home() / ".local" / "share",
+    )
+
+    def __getattr__(self, attr):
+        if not attr.startswith("_") and (defined := getattr(self, f"_{attr}")):
+            return defined
+        else:
+            return os.getenv(attr.upper(), self.defaults.get(attr))
+
+    @property
+    def _viv_cache(self) -> Path:
+        return os.getenv("VIV_CACHE") or (Path(self.xdg_cache_home) / "viv")
+
+    @property
+    def _viv_spec(self) -> List[str]:
+        return filter(None, os.getenv("VIV_SPEC", "").split(" "))
+
+
+class Cfg:
+    @property
+    def src(self) -> Path:
+        return Path(Env().xdg_data_home) / "viv" / "viv.py"
+
+
 class Ansi:
     """control ouptut of ansi(VT100) control codes"""
 
@@ -129,7 +157,7 @@ class Ansi:
         self.option: str = self.yellow
         self.metavar: str = "\033[33m"  # normal yellow
 
-        if os.getenv("NO_COLOR") or not sys.stderr.isatty():
+        if Env().no_color or not sys.stderr.isatty():
             for attr in self.__dict__:
                 setattr(self, attr, "")
 
@@ -352,7 +380,7 @@ if __name__ == "__main__":
                     ("CLI", cli),
                     ("Running Source", running),
                     ("Local Source", local),
-                    ("Cache", Cfg._cache),
+                    ("Cache", Cache().base),
                 )
             )
             + "\n"
@@ -617,18 +645,18 @@ class Meta:
 
     @classmethod
     def load(cls, name: str) -> "Meta":
-        if not (Cfg.venvcache / "vivmeta.json").exists():
+        if not (Cache().venv / name / "vivmeta.json").exists():
             warn(f"possibly corrupted vivenv: {name}")
             # add empty values for corrupted vivenvs so it will still load
             return cls(name=name, spec=[""], files=[""], exe="", id="")
         else:
-            meta = json.loads((c.venvcache / name / "vivmeta.json").read_text())
+            meta = json.loads((Cache().venv / name / "vivmeta.json").read_text())
 
         return cls(**meta)
 
     def write(self, p: Path | None = None) -> None:
         if not p:
-            p = (c.venvcache) / self.name / "vivmeta.json"
+            p = (Cache().venv) / self.name / "vivmeta.json"
 
         p.write_text(json.dumps(self.__dict__))
 
@@ -653,10 +681,10 @@ class ViVenv:
         id = id if id else get_hash(spec, track_exe)
 
         self.name = name if name else id
-        self.path = path if path else c.venvcache / self.name
+        self.path = path if path else Cache().venv / self.name
 
         if not metadata:
-            if self.name in (d.name for d in c.venvcache.iterdir()):
+            if self.name in (d.name for d in Cache().venv.iterdir()):
                 self.loaded = True
                 self.meta = Meta.load(self.name)
             else:
@@ -713,7 +741,7 @@ class ViVenv:
             cmd,
             spinmsg="installing packages in vivenv",
             clean_up_path=self.path,
-            verbose=bool(os.getenv("VIV_VERBOSE")),
+            verbose=bool(Env().viv_verbose),
         )
 
     def touch(self) -> None:
@@ -739,7 +767,7 @@ class ViVenv:
 
     def tree(self) -> None:
         _id = self.meta.id if self.meta.id == self.name else self.name
-        # TODO: generarlize and loop this or make a template..
+
         items = [
             f"{a.magenta}{k}{a.end}: {v}"
             for k, v in {
@@ -778,8 +806,8 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
         name: use as vivenv name, if not provided id is used
     """
 
-    vivenv = ViVenv([*list(packages), *c.viv_spec], track_exe=track_exe, name=name)
-    if not vivenv.loaded or os.getenv("VIV_FORCE"):
+    vivenv = ViVenv([*list(packages), *Env().viv_spec], track_exe=track_exe, name=name)
+    if not vivenv.loaded or Env().viv_force:
         vivenv.create()
         vivenv.install_pkgs()
 
@@ -797,7 +825,7 @@ def modify_sys_path(new_path: Path) -> None:
 
 def get_venvs() -> Dict[str, ViVenv]:
     vivenvs = {}
-    for p in c.venvcache.iterdir():
+    for p in Cache().venv.iterdir():
         vivenv = ViVenv.load(p.name)
         vivenvs[vivenv.name] = vivenv
     return vivenvs
@@ -856,7 +884,7 @@ def fetch_source(reference: str) -> str:
     (hash := hashlib.sha256()).update(src.encode())
     sha256 = hash.hexdigest()
 
-    cached_src_file = c.srccache / f"{sha256}.py"
+    cached_src_file = Cache().src / f"{sha256}.py"
 
     if not cached_src_file.is_file():
         cached_src_file.write_text(src)
@@ -871,23 +899,13 @@ def make_executable(path: Path) -> None:
     os.chmod(path, mode)
 
 
-class Cfg:
-    """viv config manager"""
+def ensure(d: Path) -> Path:
+    d.mkdir(exist_ok=True, parents=True)
+    return d
 
-    _cache = Path(
-        os.getenv(
-            "VIV_CACHE",
-            Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache")) / "viv",
-        )
-    )
 
-    @property
-    def viv_spec(self) -> List[str]:
-        env_viv_spec = os.getenv("VIV_SPEC")
-        if env_viv_spec:
-            return env_viv_spec.split(" ")
-        else:
-            return []
+class Cache:
+    base = Env().viv_cache
 
     @staticmethod
     def _ensure(p: Path) -> Path:
@@ -895,28 +913,12 @@ class Cfg:
         return p
 
     @property
-    def venvcache(self) -> Path:
-        return self._ensure(self._cache / "venvs")
+    def src(self) -> Path:
+        return self._ensure(self.base / "src")
 
     @property
-    def srccache(self) -> Path:
-        return self._ensure(self._cache / "src")
-
-    @property
-    def binparent(self) -> Path:
-        return self._ensure(
-            Path(os.getenv("VIV_BIN_DIR", Path.home() / ".local" / "bin"))
-        )
-
-    @property
-    def srcdefault(self) -> Path:
-        parent = (
-            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "viv"
-        )
-        return self._ensure(parent) / "viv.py"
-
-
-c = Cfg()
+    def venv(self) -> Path:
+        return self._ensure(self.base / "venvs")
 
 
 class Viv:
@@ -994,7 +996,7 @@ class Viv:
             # re-create env again since path's are hard-coded
             vivenv = ViVenv(spec)
 
-            if not vivenv.loaded or os.getenv("VIV_FORCE"):
+            if not vivenv.loaded or Env().viv_force:
                 vivenv.create()
                 vivenv.install_pkgs()
                 vivenv.meta.write()
@@ -1066,7 +1068,7 @@ class Viv:
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         echo("updating local source copy of viv")
-        shutil.copy(Cfg.srccache / f"{sha256}.py", src)
+        shutil.copy(Cache.src / f"{sha256}.py", src)
         make_executable(src)
         echo("symlinking cli")
 
@@ -1085,7 +1087,7 @@ class Viv:
         )
 
     def _get_new_version(self, ref: str) -> Tuple[str, str]:
-        sys.path.append(str(Cfg.srccache))
+        sys.path.append(str(Cache.src))
         return (sha256 := fetch_source(ref)), __import__(sha256).__version__
 
     def manage(self, args: Namespace) -> None:
@@ -1145,11 +1147,11 @@ class Viv:
 
         elif args.subcmd == "purge":
             to_remove = []
-            if Cfg._cache.is_dir():
-                to_remove.append(Cfg._cache)
+            if Cache.base.is_dir():
+                to_remove.append(Cache.base)
             if args.src.is_file():
                 to_remove.append(
-                    args.src.parent if args.src == Cfg.srcdefault else args.src
+                    args.src.parent if args.src == (Cfg().src) else args.src
                 )
             if self.local_source and self.local_source.is_file():
                 if self.local_source.parent.name == "viv":
@@ -1191,7 +1193,9 @@ class Viv:
         """
         default_bin, bin = self._pick_bin(args)
         output = (
-            Cfg.binparent / default_bin if not args.output else args.output.absolute()
+            Env().viv_bin_dir / default_bin
+            if not args.output
+            else args.output.absolute()
         )
 
         if output.is_file():
@@ -1255,7 +1259,7 @@ class Viv:
             # ephemeral (default), semi-ephemeral (persist inside /tmp), or
             # persist (use c.cache)
 
-            if not vivenv.loaded or os.getenv("VIV_FORCE"):
+            if not vivenv.loaded or Env().viv_force:
                 if not args.keep:
                     with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                         vivenv.path = Path(tmpdir)
@@ -1370,7 +1374,7 @@ class Cli:
                 "-s",
                 "--src",
                 help="path/to/source_file",
-                default=Cfg.srcdefault,
+                default=Cfg().src,
                 metavar="<src>",
             ),
             Arg(
