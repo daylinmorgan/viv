@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-15-ga7ff658-dev"
+__version__ = "23.5a5-18-g4641bbb-dev"
 
 
 class Spinner:
@@ -279,7 +279,7 @@ class Template:
         meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
 
     (env / "vivmeta.json").write_text(json.dumps(meta))
-    sys.path = [p for p in sys.path if p != site.USER_SITE]
+    sys.path = [p for p in (str(env.path),*sys.path) if p != site.USER_SITE]
     site.addsitedir(str(*(env / "lib").glob("py*/si*")))
     return env
 """
@@ -856,8 +856,10 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
 
 
 def modify_sys_path(new_path: Path) -> None:
-    sys.path = [p for p in sys.path if p != site.USER_SITE]
-    site.addsitedir(str(*(new_path / "lib").glob("python*/site-packages")))
+    # also add sys.path here so that it comes first
+    path_to_add = str(*(new_path / "lib").glob("python*/site-packages"))
+    sys.path = [p for p in (path_to_add, *sys.path) if p != site.USER_SITE]
+    site.addsitedir(path_to_add)
 
 
 def get_venvs() -> Dict[str, ViVenv]:
