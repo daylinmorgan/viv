@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-12-g1848a7e-dev"
+__version__ = "23.5a5-13-ge151534-dev"
 
 
 class Spinner:
@@ -421,9 +421,6 @@ if __name__ == "__main__":
             )
             + "\n"
         )
-
-
-t = Template()
 
 
 # TODO: convert the below functions into a proper file/stream logging interface
@@ -957,6 +954,7 @@ def uses_viv(txt: str) -> bool:
 
 class Viv:
     def __init__(self) -> None:
+        self.t = Template()
         self.vivenvs = get_venvs()
         self._get_sources()
         self.name = "viv" if self.local else "python3 <(curl -fsSL viv.dayl.in/viv.py)"
@@ -1051,13 +1049,13 @@ class Viv:
         echo("see below for import statements\n")
 
         if standalone:
-            sys.stdout.write(t.standalone(spec))
+            sys.stdout.write(self.t.standalone(spec))
             return
 
         if path and not self.local_source:
             error("No local viv found to import from", code=1)
 
-        sys.stdout.write(t.frozen_import(path, self.local_source, spec))
+        sys.stdout.write(self.t.frozen_import(path, self.local_source, spec))
 
     def list(self, quiet: bool, full: bool, use_json: bool) -> None:
         """list all vivenvs"""
@@ -1148,7 +1146,7 @@ class Viv:
         else:
             echo("Current:")
             sys.stderr.write(
-                t.show(
+                self.t.show(
                     cli=shutil.which("viv"),
                     running=self.running_source,
                     local=self.local_source,
@@ -1170,7 +1168,7 @@ class Viv:
 
         if confirm(
             "Would you like to perform the above installation steps?",
-            t.update(self.local_source, cli, self.local_version, next_version),
+            self.t.update(self.local_source, cli, self.local_version, next_version),
             yes=yes,
         ):
             self._install_local_src(
@@ -1198,7 +1196,7 @@ class Viv:
 
         if confirm(
             "Would you like to perform the above installation steps?",
-            t.install(src, cli),
+            self.t.install(src, cli),
             yes=yes,
         ):
             self._install_local_src(sha256, src, cli, yes)
@@ -1279,7 +1277,7 @@ class Viv:
             yes=yes,
         ):
             with output.open("w") as f:
-                f.write(t.shim(path, self.local_source, standalone, spec, bin))
+                f.write(self.t.shim(path, self.local_source, standalone, spec, bin))
 
             make_executable(output)
 
@@ -1457,13 +1455,15 @@ class Cli:
                 type=Path,
             ),
         ],
-        ("run", "shim"): [
+        ("run", "freeze"): [
             Arg(
                 "-k",
                 "--keep",
                 help="preserve environment",
                 action="store_true",
             ),
+        ],
+        ("run", "shim"): [
             Arg("-b", "--bin", help="console_script/script to invoke", metavar="<bin>"),
         ],
         ("manage|purge", "manage|update", "manage|install"): [
@@ -1536,7 +1536,9 @@ class Cli:
 
     def __init__(self, viv: Viv) -> None:
         self.viv = viv
-        self.parser = ArgumentParser(prog=viv.name, description=t.description(viv.name))
+        self.parser = ArgumentParser(
+            prog=viv.name, description=viv.t.description(viv.name)
+        )
         self._cmd_arg_group_map()
         self.parsers = self._make_parsers()
         self._add_args()
