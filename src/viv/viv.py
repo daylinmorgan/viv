@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-19-g93fd53e-dev"
+__version__ = "23.5a5-21-g135f2bf-dev"
 
 
 class Spinner:
@@ -213,12 +213,12 @@ class Ansi:
         return f"{getattr(self,style)}{txt}{getattr(self,'end')}"
 
     def tagline(self) -> str:
-        """generate the viv tagline!"""
+        """generate the viv tagline"""
 
         return " ".join(
             (
                 self.style(f, "magenta") + self.style(rest, "cyan")
-                for f, rest in (("v", "iv"), ("i", "sn't"), ("v", "env!"))
+                for f, rest in (("v", "iv"), ("i", "sn't"), ("v", "env"))
             )
         )
 
@@ -289,9 +289,8 @@ class Template:
         return f"""
 
 {a.tagline()}
-to create/activate a vivenv:
-- from command line: `{a.bold}{name} --help{a.end}`
-- within python script: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
+command line: `{a.bold}{name} --help{a.end}`
+python api: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
 
     @staticmethod
