@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-21-g135f2bf-dev"
+__version__ = "23.5a5-22-gfac4b38-dev"
 
 
 class Spinner:
@@ -714,6 +714,8 @@ class ViVenv:
 
         self.name = name if name else id
         self.path = path if path else Cache().venv / self.name
+        self.python = self.path / "bin" / "python"
+        self.pip = ("pip", "--python", self.python)
 
         if not metadata:
             if self.name in (d.name for d in Cache().venv.iterdir()):
@@ -766,9 +768,7 @@ class ViVenv:
 
     def install_pkgs(self) -> None:
         cmd: List[str] = [
-            "pip",
-            "--python",
-            str(self.path / "bin" / "python"),
+            *self.pip,
             "install",
             "--force-reinstall",
         ] + self.meta.spec
@@ -1341,11 +1341,7 @@ class Viv:
                     vivenv.touch()
                     vivenv.meta.write()
 
-                    sys.exit(
-                        subprocess.run(
-                            [vivenv.path / "bin" / "python", script, *rest]
-                        ).returncode
-                    )
+                    sys.exit(subprocess.run([vivenv.python, script, *rest]).returncode)
 
         else:
             _, bin = self._pick_bin(reqs, bin)
