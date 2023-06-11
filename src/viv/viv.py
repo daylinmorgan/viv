@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-22-gfac4b38-dev"
+__version__ = "23.5a5-23-gbaa7f9c-dev"
 
 
 class Spinner:
@@ -1094,15 +1094,18 @@ class Viv:
 
         run(full_cmd, verbose=True)
 
-    def info(self, vivenv_id: str, use_json: bool) -> None:
+    def info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
         """get metadata about a vivenv"""
         vivenv = self._match_vivenv(vivenv_id)
         metadata_file = vivenv.path / "vivmeta.json"
 
         if not metadata_file.is_file():
             error(f"Unable to find metadata for vivenv: {vivenv_id}", code=1)
+
         if use_json:
             sys.stdout.write(json.dumps(vivenv.meta.__dict__))
+        elif path:
+            sys.stdout.write(f"{vivenv.path.absolute()}\n")
         else:
             vivenv.tree()
 
@@ -1409,6 +1412,14 @@ class Cli:
                 metavar="<path>",
             ),
         ],
+        ("info",): [
+            Arg(
+                "-p",
+                "--path",
+                help="print the absolute path to the vivenv",
+                action="store_true",
+            ),
+        ],
         ("remove",): [
             Arg("vivenvs", help="name/hash of vivenv", nargs="*", metavar="vivenv")
         ],
@@ -1601,6 +1612,10 @@ class Cli:
         if args.func.__name__ == "run":
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script", code=1)
+
+        if args.func.__name__ == "info":
+            if args.use_json and args.path:
+                error("--json and -p/--path are mutually exclusive", code=1)
 
     def _get_subcmd_parser(
         self,
