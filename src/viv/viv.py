@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-23-gbaa7f9c-dev"
+__version__ = "23.5a5-24-g4faa103-dev"
 
 
 class Spinner:
@@ -714,7 +714,7 @@ class ViVenv:
 
         self.name = name if name else id
         self.path = path if path else Cache().venv / self.name
-        self.python = self.path / "bin" / "python"
+        self.python = str((self.path / "bin" / "python").absolute())
         self.pip = ("pip", "--python", self.python)
 
         if not metadata:
