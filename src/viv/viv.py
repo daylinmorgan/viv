@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-27-ge697488-dev"
+__version__ = "23.5a5-28-g39786aa-dev"
 
 
 class Spinner:
@@ -973,10 +973,11 @@ class Viv:
         else:
             try:
                 _local_viv = __import__("viv")
-                self.local_source = (
-                    Path(_local_viv.__file__) if _local_viv.__file__ else None
-                )
-                self.local_version = _local_viv.__version__
+                if _local_viv.__file__:
+                    self.local_source = Path(_local_viv.__file__)
+                    self.local_version = _local_viv.__version__
+                else:
+                    self.local_version = "Not Found"
             except ImportError:
                 self.local_version = "Not Found"
 
