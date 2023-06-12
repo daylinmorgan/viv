@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-24-g4faa103-dev"
+__version__ = "23.5a5-25-g6239661-dev"
 
 
 class Spinner:
@@ -713,9 +713,7 @@ class ViVenv:
         id = id if id else get_hash(spec, track_exe)
 
         self.name = name if name else id
-        self.path = path if path else Cache().venv / self.name
-        self.python = str((self.path / "bin" / "python").absolute())
-        self.pip = ("pip", "--python", self.python)
+        self.set_path(path)
 
         if not metadata:
             if self.name in (d.name for d in Cache().venv.iterdir()):
@@ -741,6 +739,11 @@ class ViVenv:
         vivenv = cls(name=name, metadata=Meta.load(name))
 
         return vivenv
+
+    def set_path(self, path: Path | None = None) -> None:
+        self.path = path if path else Cache().venv / self.name
+        self.python = str((self.path / "bin" / "python").absolute())
+        self.pip = ("pip", "--python", self.python)
 
     def _validate_spec(self, spec: List[str]) -> List[str]:
         """ensure spec is at least of sequence of strings
@@ -1357,7 +1360,7 @@ class Viv:
             if not vivenv.loaded or Env().viv_force:
                 if not keep:
                     with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-                        vivenv.path = Path(tmpdir)
+                        vivenv.set_path(Path(tmpdir))
                         vivenv.create()
                         vivenv.install_pkgs()
                         sys.exit(
