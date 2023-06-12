@@ -50,7 +50,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a5-26-g79ae1da-dev"
+__version__ = "23.5a5-27-ge697488-dev"
 
 
 class Spinner:
@@ -1322,7 +1322,12 @@ class Viv:
                             "https://raw.githubusercontent.com/daylinmorgan/viv/script-runner/src/viv/viv.py"
                         )
                     )
-                script_text = fetch_script(script)
+
+                if Path(script).is_file():
+                    script_text = Path(script).read_text()
+                else:
+                    script_text = fetch_script(script)
+
                 viv_used = uses_viv(script_text)
                 scriptpath.write_text(script_text)
 
