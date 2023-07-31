@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a6"
+__version__ = "23.5a6-dev"
 
 
 class Spinner:
@@ -1023,7 +1023,8 @@ def uses_viv(txt: str) -> bool:
     return bool(
         re.search(
             """
-            \s*__import__\(\s*["']viv["']\s*\).use\(.*
+            ^(?!\#)\s*
+            __import__\(\s*["']viv["']\s*\).use\(.*
             |
             from\ viv\ import\ use
             |
