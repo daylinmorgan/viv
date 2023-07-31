@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a6-3-g5e2a62d-dev"
+__version__ = "23.5a6-4-g4d75feb-dev"
 
 
 class Spinner:
@@ -844,6 +844,7 @@ class ViVenv:
         with Spinner("creating vivenv"):
             venv.create(
                 self.path,
+                prompt=f"viv-{self.name}",
                 clear=True,
                 symlinks=True,
             )
