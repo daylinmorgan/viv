@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a6-dev"
+__version__ = "23.5a6-3-g5e2a62d-dev"
 
 
 class Spinner:
@@ -1352,13 +1352,13 @@ class Viv:
         default_bin, bin = self._pick_bin(reqs, bin)
         output = Env().viv_bin_dir / default_bin if not output else output.absolute()
 
-        if output.is_file():
-            err_quit(f"{output} already exists...exiting")
-
         if freeze:
             spec = resolve_deps(reqs, requirements)
         else:
             spec = combined_spec(reqs, requirements)
+
+        if output.is_file():
+            log.warning(f"{output} already exists")
 
         if confirm(
             f"Write shim for {a.bold}{bin}{a.end} to {a.green}{output}{a.end}?",
