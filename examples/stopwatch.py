@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S viv run textual -k -s
+
 """A tui stopwatch built w/textual adapted from their tutorial:
 https://github.com/Textualize/textual/tree/main/docs/examples/tutorial
 """
 
-__import__("viv").use("textual")
+# use shebang instead
+# __import__("viv").use("textual")
 
 from time import monotonic
 
