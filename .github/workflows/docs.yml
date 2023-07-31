@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-docs:
+  build:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -24,9 +24,24 @@ jobs:
       - name: Build Docs
         run: pdm run make docs
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          cname: viv.dayl.in 
-          publish_dir: ./site
+          path: ./site
+
+  deploy:
+    needs: build
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
