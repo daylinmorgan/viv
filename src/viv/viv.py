@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a6-5-g7932e13-dev"
+__version__ = "23.5a6-6-gec123b0-dev"
 
 
 class Spinner:
@@ -1039,6 +1039,37 @@ def uses_viv(txt: str) -> bool:
     )
 
 
+def _read_metadata_block(txt: str) -> None:
+    """check for pep722 style metadata block and parse"""
+
+    lines = iter(txt.splitlines())
+    for line in lines:
+        if line.startswith("##"):
+            block_type, sep, extra = line[2:].strip().partition(":")
+            if not sep:
+                continue
+            block_data = []
+            for line in lines:
+                if not line.startswith("##"):
+                    break
+                line = line[2:].strip()
+                if not line:
+                    continue
+                block_data.append(line)
+            yield block_type, extra, block_data
+
+
+def deps_block(txt: str):
+    return list(
+        (
+            req
+            for block_type, extra, block_data in _read_metadata_block(txt)
+            for req in block_data
+            if block_type == "Script Dependencies"
+        )
+    )
+
+
 class Viv:
     def __init__(self) -> None:
         self.t = Template()
@@ -1396,6 +1427,14 @@ class Viv:
                 script_text = fetch_script(script)
 
             viv_used = uses_viv(script_text)
+            deps = deps_block(script_text)
+
+            if viv_used and deps_block:
+                error(
+                    "Script Dependencies block and "
+                    "`viv` API can't be used in the same script"
+                )
+
             scriptpath.write_text(script_text)
 
             if not keep:
@@ -1411,7 +1450,7 @@ class Viv:
                     ).returncode
                 )
             else:
-                vivenv = ViVenv(spec)
+                vivenv = ViVenv(spec + deps)
                 if not vivenv.loaded or Env().viv_force:
                     vivenv.create()
                     vivenv.install_pkgs()
