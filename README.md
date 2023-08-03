@@ -23,14 +23,19 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run pycowsay -- "viv isn't venv\!"
 ```
 ---
 
-`Viv` is a standalone dependency-free `venv` creator.
+`Viv` is a standalone dependency-free `venv` creator [^1].
+`Viv` helps you ignore silly things like managing temporary or rarely used virtual environments,
+while still unleashing the full power of python scripting with it's entire ecosystem at your disposal.
 
 `Viv`'s uncompromising insistence on portability means that it will always:
 
 1. only use the standard library
 2. never exceed a single script.
 
-For that reason any usage of the `CLI` can be accomplished using a remote copy as seen in the below install command.
+For that reason any usage of the `cli` can be accomplished using a remote copy as seen in the below install command.
+
+Currently, the project is in alpha and in particular the `cli` is under active development and is subject to change.
+The basic feature set surrounding virtual environment/dependency management should remain stable however.
 
 ## Setup
 
@@ -125,3 +130,5 @@ pipx (1.1.0)
 └── userpath>=1.6.0 (1.8.0)
     └── click (8.1.3)
 ```
+
+[^1]: You do need to have `pip` but surely you have `pip` already.
