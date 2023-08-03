@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a6-4-g4d75feb-dev"
+__version__ = "23.5a6-5-g7932e13-dev"
 
 
 class Spinner:
@@ -786,9 +786,11 @@ class ViVenv:
         path: Path | None = None,
         skip_load: bool = False,
         metadata: Meta | None = None,
+        skip_validation: bool = False,
     ) -> None:
         self.loaded = False
-        spec = self._validate_spec(spec)
+        if not skip_validation:
+            spec = self._validate_spec(spec)
         id = id if id else get_hash(spec, track_exe)
 
         self.name = name if name else id[:8]
@@ -1025,14 +1027,14 @@ def uses_viv(txt: str) -> bool:
         re.search(
             """
             ^(?!\#)\s*
-            __import__\(\s*["']viv["']\s*\).use\(.*
+            (?:__import__\(\s*["']viv["']\s*\))
             |
-            from\ viv\ import\ use
+            (?:from\ viv\ import\ use)
             |
-            import\ viv 
+            (?:import\ viv)
         """,
             txt,
-            re.VERBOSE,
+            re.VERBOSE | re.MULTILINE,
         )
     )
 
@@ -1370,6 +1372,55 @@ class Viv:
 
             make_executable(output)
 
+    def _run_script(
+        self, spec: List[str], script: str, keep: bool, rest: List[str]
+    ) -> None:
+        env = os.environ
+        name = script.split("/")[-1]
+
+        # TODO: reduce boilerplate and dry out
+        with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+            tmppath = Path(tmpdir)
+            scriptpath = tmppath / name
+            if not self.local_source:
+                (tmppath / "viv.py").write_text(
+                    # TODO: use latest tag once ready
+                    fetch_script(
+                        "https://raw.githubusercontent.com/daylinmorgan/viv/dev/src/viv/viv.py"
+                    )
+                )
+
+            if Path(script).is_file():
+                script_text = Path(script).read_text()
+            else:
+                script_text = fetch_script(script)
+
+            viv_used = uses_viv(script_text)
+            scriptpath.write_text(script_text)
+
+            if not keep:
+                env.update({"VIV_CACHE": tmpdir})
+                os.environ["VIV_CACHE"] = tmpdir
+
+            if viv_used:
+                env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
+
+                sys.exit(
+                    subprocess.run(
+                        [sys.executable, scriptpath, *rest], env=env
+                    ).returncode
+                )
+            else:
+                vivenv = ViVenv(spec)
+                if not vivenv.loaded or Env().viv_force:
+                    vivenv.create()
+                    vivenv.install_pkgs()
+
+                vivenv.touch()
+                vivenv.meta.write()
+
+                sys.exit(subprocess.run([vivenv.python, scriptpath, *rest]).returncode)
+
     def run(
         self,
         reqs: List[str],
@@ -1391,54 +1442,7 @@ class Viv:
         spec = combined_spec(reqs, requirements)
 
         if script:
-            env = os.environ
-            name = script.split("/")[-1]
-
-            # TODO: reduce boilerplate and dry out
-            with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-                tmppath = Path(tmpdir)
-                scriptpath = tmppath / name
-                if not self.local_source:
-                    (tmppath / "viv.py").write_text(
-                        # TODO: use latest tag once ready
-                        fetch_script(
-                            "https://raw.githubusercontent.com/daylinmorgan/viv/dev/src/viv/viv.py"
-                        )
-                    )
-
-                if Path(script).is_file():
-                    script_text = Path(script).read_text()
-                else:
-                    script_text = fetch_script(script)
-
-                viv_used = uses_viv(script_text)
-                scriptpath.write_text(script_text)
-
-                if not keep:
-                    env.update({"VIV_CACHE": tmpdir})
-                    os.environ["VIV_CACHE"] = tmpdir
-
-                if viv_used:
-                    env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
-
-                    sys.exit(
-                        subprocess.run(
-                            [sys.executable, scriptpath, *rest], env=env
-                        ).returncode
-                    )
-                else:
-                    vivenv = ViVenv(spec)
-                    if not vivenv.loaded or Env().viv_force:
-                        vivenv.create()
-                        vivenv.install_pkgs()
-
-                    vivenv.touch()
-                    vivenv.meta.write()
-
-                    sys.exit(
-                        subprocess.run([vivenv.python, scriptpath, *rest]).returncode
-                    )
-
+            self._run_script(spec, script, keep, rest)
         else:
             _, bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
@@ -1461,11 +1465,11 @@ class Viv:
                 else:
                     vivenv.create()
                     vivenv.install_pkgs()
-
-            vivenv.touch()
-            vivenv.meta.write()
-
-            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode)
+                    vivenv.touch()
+                    vivenv.meta.write()
+                    sys.exit(
+                        subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode
+                    )
 
 
 class Arg:
@@ -1661,10 +1665,11 @@ class Cli:
                 self.parsers[grp].add_argument(*arg.args, **arg.kwargs)
 
     def _validate_args(self, args: Namespace) -> None:
-        if args.func.__name__ in ("freeze", "shim"):
+        name = args.func.__name__
+        if name in ("freeze", "shim"):
             if not args.reqs:
                 error("must specify a requirement")
-        if args.func.__name__ in ("freeze", "shim"):
+
             if not self.viv.local_source and not (args.standalone or args.path):
                 log.warning(
                     "failed to find local copy of `viv` "
@@ -1679,7 +1684,7 @@ class Cli:
             if args.path and args.standalone:
                 error("-p/--path and -s/--standalone are mutually exclusive")
 
-        if args.func.__name__ == "manage_install" and self.viv.local_source:
+        if name == "manage_install" and self.viv.local_source:
             error(
                 f"found existing viv installation at {self.viv.local_source}",
                 "use "
@@ -1687,7 +1692,7 @@ class Cli:
                 + " to modify current installation.",
             )
 
-        if args.func.__name__ == "manage_update":
+        if name == "manage_update":
             if not self.viv.local_source:
                 error(
                     a.style("viv manage update", "bold")
@@ -1699,11 +1704,12 @@ class Cli:
                     a.style("viv manage update", "bold")
                     + " shouldn't be used with a git-based installation",
                 )
-        if args.func.__name__ == "run":
+
+        if name == "run":
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script")
 
-        if args.func.__name__ == "info":
+        if name == "info":
             if args.use_json and args.path:
                 error("--json and -p/--path are mutually exclusive")
 
@@ -1758,7 +1764,6 @@ class Cli:
                             for k in self.cmd_arg_group_map[f"{cmd}|{subcmd}"]
                         ],
                         **kwargs,
-                        # ).set_defaults(func=getattr(self.viv, cmd), subcmd=subcmd)
                     ).set_defaults(func=getattr(self.viv, f"{cmd}_{subcmd}"))
 
             else:
