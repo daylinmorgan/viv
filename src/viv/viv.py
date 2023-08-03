@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7"
+__version__ = "23.5a7-1-g86f4773-dev"
 
 
 class Spinner:
@@ -347,7 +347,7 @@ class Template:
     _id = sha256.hexdigest()
     if (env := cache / (name if name else _id)) not in cache.glob("*/") or force:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.create(env, symlinks=True, clear=True)
+        venv.create(env, prompt=f"viv-{name}", symlinks=True, clear=True)
         kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if verbose else (-1, 2))))
         cmd = ["pip", "--python", str(env / "bin" / "python"), "install", *spec]
         p = run(cmd, **kw)
@@ -362,8 +362,8 @@ class Template:
         meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
 
     (env / "vivmeta.json").write_text(json.dumps(meta))
-    site.addsitedir(sitepkgs:=str(*(env / "lib").glob("py*/si*")))
-    sys.path = [p for p in (sitepkgs,*sys.path) if p != site.USER_SITE]
+    site.addsitedir(sitepkgs := str(*(env / "lib").glob("py*/si*")))
+    sys.path = [p for p in (sitepkgs, *sys.path) if p != site.USER_SITE]
     return env
 """
 
