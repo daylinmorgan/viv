@@ -172,3 +172,4 @@ poetry.toml
 .task.mk
 # copy of README.md
 docs/index.md
+docs/viv.py
