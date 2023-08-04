@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7-3-g6e6fb99-dev"
+__version__ = "23.5a7-4-g7100243-dev"
 
 
 class Spinner:
@@ -711,7 +711,10 @@ def run(
             universal_newlines=True,
         )
 
-    log.debug("output:\n" + "\n".join(f"-> {line}" for line in p.stdout.splitlines()))
+    if not verbose:
+        log.debug(
+            "output:\n" + "\n".join(f"-> {line}" for line in p.stdout.splitlines())
+        )
 
     if p.returncode != 0 and not ignore_error:
         a.subprocess(command, p.stdout)
@@ -847,11 +850,8 @@ class ViVenv:
 
     def bin_exists(self, bin: str) -> None:
         if not (self.path / "bin" / bin).is_file():
-            message = (
-                f"{a.bold}{bin}{a.end} does not exist, "
-                "use -b/--bin to specify an entrypoint"
-                "\nOptions:\n"
-            )
+            message = f"{a.bold}{bin}{a.end} does not exist " "\nOptions:\n"
+
             message += "  " + " ".join(
                 (
                     a.style(p.name, "bold")
@@ -1230,8 +1230,7 @@ class Viv:
         vivenv = self._match_vivenv(vivenv_id)
         bin = vivenv.path / "bin" / cmd
 
-        if not bin.exists():
-            err_quit(f"{cmd} does not exist in {vivenv.name}")
+        vivenv.bin_exists(bin)
 
         full_cmd = [str(bin), *rest]
 
