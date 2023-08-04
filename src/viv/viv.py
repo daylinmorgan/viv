@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7-4-g7100243-dev"
+__version__ = "23.5a7-5-g0411f81-dev"
 
 
 class Spinner:
@@ -1528,12 +1528,11 @@ class Viv:
                 else:
                     vivenv.create()
                     vivenv.install_pkgs()
-                    vivenv.touch()
-                    vivenv.meta.write()
-                    vivenv.bin_exists(bin)
-                    sys.exit(
-                        subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode
-                    )
+
+            vivenv.touch()
+            vivenv.meta.write()
+            vivenv.bin_exists(bin)
+            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode)
 
 
 class Arg:
