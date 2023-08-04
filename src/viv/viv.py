@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7-1-gae30ff2-dev"
+__version__ = "23.5a7-2-g7da6cc7-dev"
 
 
 class Spinner:
@@ -840,6 +840,22 @@ class ViVenv:
 
         return sorted(spec)
 
+    def bin_exists(self, bin: str) -> None:
+        if not (self.path / "bin" / bin).is_file():
+            message = (
+                f"{a.bold}{bin}{a.end} does not exist, "
+                "use -b/--bin to specify an entrypoint"
+                "\nOptions:\n"
+            )
+            message += "\t" + " ".join(
+                (
+                    a.style(p.name, "bold")
+                    for p in (self.path / "bin").iterdir()
+                    if not p.name.lower().startswith("activate")
+                )
+            )
+            err_quit(message)
+
     def create(self, quiet: bool = False) -> None:
         log.info(f"new unique vivenv: {a.bold}{self.name}{a.end}")
         log.debug(f"creating new venv at {self.path}")
@@ -1499,6 +1515,7 @@ class Viv:
                         vivenv.set_path(Path(tmpdir))
                         vivenv.create()
                         vivenv.install_pkgs()
+                        vivenv.bin_exists(bin)
                         sys.exit(
                             subprocess.run(
                                 [vivenv.path / "bin" / bin, *rest]
@@ -1509,6 +1526,7 @@ class Viv:
                     vivenv.install_pkgs()
                     vivenv.touch()
                     vivenv.meta.write()
+                    vivenv.bin_exists(bin)
                     sys.exit(
                         subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode
                     )
