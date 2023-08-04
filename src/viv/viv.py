@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7-2-g7da6cc7-dev"
+__version__ = "23.5a7-3-g6e6fb99-dev"
 
 
 class Spinner:
@@ -692,6 +692,9 @@ def run(
         verbose: If true, print subcommand output.
     """
 
+    # TODO: remove 'verbose' and rely on log level?
+    log.debug("executing subcmd\n\t" + " ".join(command))
+
     if spinmsg and not verbose:
         with Spinner(spinmsg):
             p = subprocess.run(
@@ -707,6 +710,8 @@ def run(
             stderr=None if verbose else subprocess.STDOUT,
             universal_newlines=True,
         )
+
+    log.debug("output:\n" + "\n".join(f"-> {line}" for line in p.stdout.splitlines()))
 
     if p.returncode != 0 and not ignore_error:
         a.subprocess(command, p.stdout)
@@ -847,7 +852,7 @@ class ViVenv:
                 "use -b/--bin to specify an entrypoint"
                 "\nOptions:\n"
             )
-            message += "\t" + " ".join(
+            message += "  " + " ".join(
                 (
                     a.style(p.name, "bold")
                     for p in (self.path / "bin").iterdir()
