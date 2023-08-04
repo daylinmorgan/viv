@@ -52,7 +52,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.5a7-1-g86f4773-dev"
+__version__ = "23.5a7-1-gae30ff2-dev"
 
 
 class Spinner:
@@ -859,6 +859,9 @@ class ViVenv:
             "install",
             "--force-reinstall",
         ] + self.meta.spec
+
+        if not Env().viv_no_setuptools and "setuptools" not in self.meta.spec:
+            cmd.append("setuptools")
 
         run(
             cmd,
