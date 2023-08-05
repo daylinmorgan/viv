@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-1-g0547fd6-dev"
+__version__ = "23.8a1-3-ga78624c-dev"
 
 
 class Spinner:
@@ -1270,6 +1270,7 @@ class Viv:
                 cli.unlink()
                 cli.symlink_to(src)
         else:
+            cli.parent.mkdir(exist_ok=True, parents=True)
             cli.symlink_to(src)
 
         log.info("Remember to include the following line in your shell rc file:")
