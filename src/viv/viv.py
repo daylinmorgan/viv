@@ -41,6 +41,7 @@ from types import TracebackType
 from typing import (
     Any,
     Dict,
+    Generator,
     List,
     NoReturn,
     Optional,
@@ -52,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1"
+__version__ = "23.8a1-1-g0547fd6-dev"
 
 
 class Spinner:
@@ -1069,7 +1070,7 @@ def uses_viv(txt: str) -> bool:
     )
 
 
-def _read_metadata_block(txt: str) -> None:
+def _read_metadata_block(txt: str) -> Generator[Tuple[str, str, List[str]], None, None]:
     """check for pep722 style metadata block and parse"""
 
     lines = iter(txt.splitlines())
@@ -1089,7 +1090,7 @@ def _read_metadata_block(txt: str) -> None:
             yield block_type, extra, block_data
 
 
-def deps_block(txt: str):
+def deps_block(txt: str) -> List[str]:
     return list(
         (
             req
@@ -1236,7 +1237,7 @@ class Viv:
         vivenv = self._match_vivenv(vivenv_id)
         bin = vivenv.path / "bin" / cmd
 
-        vivenv.bin_exists(bin)
+        vivenv.bin_exists(bin.name)
 
         full_cmd = [str(bin), *rest]
 
@@ -1458,7 +1459,7 @@ class Viv:
             viv_used = uses_viv(script_text)
             deps = deps_block(script_text)
 
-            if viv_used and deps_block:
+            if viv_used and deps:
                 error(
                     "Script Dependencies block and "
                     "`viv` API can't be used in the same script"
