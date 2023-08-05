@@ -25,7 +25,7 @@ cmds = {
 cli_doc = """
 # cli
 
-![help](/svgs/viv-help.svg)
+![help](./svgs/viv-help.svg)
 """
 
 
@@ -56,7 +56,7 @@ for cmd, subcmds in cmds.items():
     cli_doc += dedent(
         f"""
     ## {cmd}
-    ![cmd](/svgs/{p.name})
+    ![cmd](./svgs/{p.name})
     """
     )
     yartsu(p, cmd)
@@ -65,7 +65,7 @@ for cmd, subcmds in cmds.items():
         cli_doc += dedent(
             f"""
         ### {cmd} {subcmd}
-        ![cmd](/svgs/{p_sub.name})
+        ![cmd](./svgs/{p_sub.name})
         """
         )
         yartsu(p_sub, [cmd, subcmd])
