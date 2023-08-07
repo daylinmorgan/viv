@@ -11,15 +11,20 @@ VIV = Path(__file__).parent.parent / "src" / "viv" / "viv.py"
 CLI_DOC_PATH = DOCS_PATH / "cli.md"
 
 
-cmds = {
-    "list": [],
-    "exe": ["python", "pip"],
-    "remove": [],
-    "manage": ["update", "purge", "show", "install"],
-    "freeze": [],
-    "shim": [],
-    "run": [],
-}
+(
+    cmds := dict.fromkeys(
+        (
+            "list",
+            "exe",
+            "remove",
+            "manage",
+            "freeze",
+            "shim",
+            "run",
+        ),
+        [],
+    )
+).update({"manage": ["update", "purge", "show", "install"]})
 
 
 cli_doc = """

@@ -9,12 +9,6 @@
 ## exe
 ![cmd](./svgs/viv-exe-help.svg)
 
-### exe python
-![cmd](./svgs/viv-exe-python-help.svg)
-
-### exe pip
-![cmd](./svgs/viv-exe-pip-help.svg)
-
 ## remove
 ![cmd](./svgs/viv-remove-help.svg)
 
