@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-7-g8f6adcc-dev"
+__version__ = "23.8a1-7-gc75ae60-dev"
 
 
 class Spinner:
@@ -374,7 +374,7 @@ class Template:
         return f"""
 
 {a.tagline()}
-command line: `{a.bold}{name} --help{a.end}`
+command line: `{a.bold}viv run typer rich-click -s ./script.py{a.end}`
 python api: {a.style('__import__("viv").use("typer", "rich-click")','bold')}
 """
 
