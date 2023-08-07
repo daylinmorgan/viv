@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-5-g4c782db-dev"
+__version__ = "23.8a1-7-g8f6adcc-dev"
 
 
 class Spinner:
@@ -1151,12 +1151,15 @@ class Viv:
         else:
             err_quit(f"no matches found for {name_id}")
 
-    def remove(self, vivenvs: List[str]) -> None:
+    def cache(self) -> None:
+        """manage the viv vivenv cache"""
+
+    def cache_remove(self, vivenvs: List[str]) -> None:
         """\
         remove a vivenv
 
         To remove all viv venvs:
-        `viv rm $(viv l -q)`
+        `viv cache remove $(viv l -q)`
         """
 
         for name in vivenvs:
@@ -1241,7 +1244,7 @@ class Viv:
 
         run(full_cmd, verbose=True)
 
-    def info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
+    def cache_info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
         """get metadata about a vivenv"""
         vivenv = self._match_vivenv(vivenv_id)
         metadata_file = vivenv.path / "vivmeta.json"
@@ -1578,7 +1581,7 @@ class Cli:
                 metavar="<path>",
             ),
         ],
-        ("info",): [
+        ("cache_info",): [
             Arg(
                 "-p",
                 "--path",
@@ -1586,16 +1589,13 @@ class Cli:
                 action="store_true",
             ),
         ],
-        ("remove",): [
-            Arg("vivenvs", help="name/hash of vivenv", nargs="*", metavar="vivenv")
-        ],
         ("run",): [
             Arg("-s", "--script", help="remote script to run", metavar="<script>")
         ],
-        ("exe", "info"): [
+        ("exe", "cache_info"): [
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
-        ("list", "info"): [
+        ("list", "cache_info"): [
             Arg(
                 "--json",
                 help="name:metadata json for vivenvs ",
@@ -1639,7 +1639,7 @@ class Cli:
         ("run", "shim"): [
             Arg("-b", "--bin", help="console_script/script to invoke", metavar="<bin>"),
         ],
-        ("manage|purge", "manage|update", "manage|install"): [
+        ("manage_purge", "manage_update", "manage_install"): [
             Arg(
                 "-r",
                 "--ref",
@@ -1662,10 +1662,10 @@ class Cli:
                 metavar="<cli>",
             ),
         ],
-        ("shim", "manage|purge", "manage|update", "manage|install"): [
+        ("shim", "manage_purge", "manage_update", "manage_install"): [
             Arg("-y", "--yes", help="respond yes to all prompts", action="store_true")
         ],
-        ("manage|show",): [
+        ("manage_show",): [
             Arg(
                 "-p",
                 "--pythonpath",
@@ -1679,6 +1679,9 @@ class Cli:
                 help="command to to execute",
             )
         ],
+        ("cache_remove",): [
+            Arg("vivenvs", help="name/hash of vivenv", nargs="*", metavar="vivenv")
+        ],
     }
     (
         cmds := dict.fromkeys(
@@ -1687,23 +1690,35 @@ class Cli:
                 "shim",
                 "run",
                 "exe",
-                "remove",
+                "cache",
                 "freeze",
-                "info",
                 "manage",
             )
         )
     ).update(
         {
-            "manage": {
+            cmd: {
                 subcmd: {"help": help, "aliases": [subcmd[0]]}
-                for subcmd, help in (
-                    ("show", "show current installation"),
-                    ("install", "install fresh viv"),
-                    ("update", "update viv version"),
-                    ("purge", "remove traces of viv"),
-                )
+                for subcmd, help in subcmd_help
             }
+            for cmd, subcmd_help in (
+                (
+                    "cache",
+                    (
+                        ("info", "get metadata about a vivenv"),
+                        ("remove", "remove a vivenv"),
+                    ),
+                ),
+                (
+                    "manage",
+                    (
+                        ("show", "show current installation"),
+                        ("install", "install fresh viv"),
+                        ("update", "update viv version"),
+                        ("purge", "remove traces of viv"),
+                    ),
+                ),
+            )
         }
     )
 
@@ -1778,7 +1793,7 @@ class Cli:
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script")
 
-        if name == "info":
+        if name == "cache_info":
             if args.use_json and args.path:
                 error("--json and -p/--path are mutually exclusive")
 
@@ -1789,11 +1804,7 @@ class Cli:
         attr: Optional[str] = None,
         **kwargs: Any,
     ) -> ArgumentParser:
-        # override for remove
-        if name == "remove":
-            aliases = ["rm"]
-        else:
-            aliases = kwargs.pop("aliases", [name[0]])
+        aliases = kwargs.pop("aliases", [name[0]])
 
         cmd = getattr(self.viv, attr if attr else name)
         parser: ArgumentParser = subparsers.add_parser(
@@ -1830,7 +1841,7 @@ class Cli:
                         subcmd,
                         parents=[
                             self.parsers[k]
-                            for k in self.cmd_arg_group_map[f"{cmd}|{subcmd}"]
+                            for k in self.cmd_arg_group_map[f"{cmd}_{subcmd}"]
                         ],
                         **kwargs,
                     ).set_defaults(func=getattr(self.viv, f"{cmd}_{subcmd}"))
