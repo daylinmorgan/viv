@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-7-gc75ae60-dev"
+__version__ = "23.8a1-8-g156f358-dev"
 
 
 class Spinner:
@@ -678,7 +678,7 @@ class ArgumentParser(StdArgParser):
         )
 
     def error(self, message: str) -> NoReturn:
-        error(message, f"see `{self.prog} --help` for more info")
+        error(message, f"see `{a.bold}{self.prog} --help{a.end}` for more info")
         sys.exit(2)
 
 
