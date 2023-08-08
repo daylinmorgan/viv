@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-dev"
+__version__ = "23.8a3-2-g9079ecf-dev"
 
 
 class Spinner:
@@ -1882,7 +1882,7 @@ class Cli:
     ).update(
         {
             cmd: {
-                subcmd: dict(description=help, aliases=[subcmd[0]])
+                subcmd: dict(description=help, help=help, aliases=[subcmd[0]])
                 for subcmd, help in subcmd_help
             }
             for cmd, subcmd_help in (
