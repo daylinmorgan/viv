@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-14-g3201e56-dev"
+__version__ = "23.8a1-15-g3a2832e-dev"
 
 
 class Spinner:
@@ -689,7 +689,7 @@ class KVAppendAction(Action):
             d = {k: v}
         except ValueError:
             err_quit(
-                f"failed to parse key-value for {self.dest}"
+                f"failed to parse key-value for {self.dest} "
                 f'"{a.bold}{values}{a.end}" as k:v'
             )
         items = getattr(namespace, self.dest)
