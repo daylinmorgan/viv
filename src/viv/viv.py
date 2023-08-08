@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-15-g3a2832e-dev"
+__version__ = "23.8a1-16-g1a254a5-dev"
 
 
 class Spinner:
@@ -729,8 +729,7 @@ def run(
         verbose: If true, print subcommand output.
     """
 
-    # TODO: remove 'verbose' and rely on log level?
-    log.debug("executing subcmd\n\t" + " ".join(command))
+    log.debug("executing subcmd:\n  " + " ".join(command))
 
     if spinmsg and not verbose:
         with Spinner(spinmsg):
@@ -748,11 +747,6 @@ def run(
             universal_newlines=True,
         )
 
-    if not verbose:
-        log.debug(
-            "output:\n" + "\n".join(f"-> {line}" for line in p.stdout.splitlines())
-        )
-
     if p.returncode != 0 and not ignore_error:
         a.subprocess(command, p.stdout)
 
@@ -761,7 +755,12 @@ def run(
 
         sys.exit(p.returncode)
 
-    elif check_output:
+    if not verbose:
+        log.debug(
+            "output:\n" + "\n".join(f"-> {line}" for line in p.stdout.splitlines())
+        )
+
+    if check_output:
         return p.stdout
 
     else:
