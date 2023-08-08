@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-6-g0ad0447-dev"
+__version__ = "23.8a2-7-ge8f6228-dev"
 
 
 class Spinner:
@@ -1298,10 +1298,10 @@ class Viv:
         else:
             err_quit(f"no matches found for {name_id}")
 
-    def cache(self) -> None:
+    def cmd_cache(self) -> None:
         """manage the viv vivenv cache"""
 
-    def cache_remove(self, vivenvs: List[str]) -> None:
+    def cmd_cache_remove(self, vivenvs: List[str]) -> None:
         """\
         remove a vivenv
 
@@ -1319,7 +1319,7 @@ class Viv:
                     f"cowardly exiting because I didn't find vivenv: {name}",
                 )
 
-    def freeze(
+    def cmd_freeze(
         self,
         reqs: List[str],
         requirements: Path,
@@ -1355,7 +1355,7 @@ class Viv:
 
         sys.stdout.write(self.t.frozen_import(path, self.local_source, spec))
 
-    def list(
+    def cmd_list(
         self,
         quiet: bool,
         verbose: bool,
@@ -1398,7 +1398,7 @@ class Viv:
             for _, vivenv in vivenvs.items():
                 vivenv.show()
 
-    def exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
+    def cmd_exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
         """\
         run binary/script in existing vivenv
 
@@ -1417,7 +1417,7 @@ class Viv:
         # TODO: use subprocess_run_quit
         subprocess_run(full_cmd, verbose=True)
 
-    def cache_info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
+    def cmd_cache_info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
         """get metadata about a vivenv"""
         vivenv = self._match_vivenv(vivenv_id)
         metadata_file = vivenv.path / "vivmeta.json"
@@ -1457,10 +1457,10 @@ class Viv:
         sys.path.append(str(Cfg().cache_src))
         return (sha256 := fetch_source(ref)), __import__(sha256).__version__
 
-    def manage(self) -> None:
+    def cmd_manage(self) -> None:
         """manage viv itself"""
 
-    def manage_show(
+    def cmd_manage_show(
         self,
         pythonpath: bool = False,
     ) -> None:
@@ -1480,7 +1480,7 @@ class Viv:
                 )
             )
 
-    def manage_update(
+    def cmd_manage_update(
         self,
         ref: str,
         src: Path,
@@ -1507,7 +1507,7 @@ class Viv:
                 yes,
             )
 
-    def manage_install(
+    def cmd_manage_install(
         self,
         ref: str,
         src: Path,
@@ -1528,7 +1528,7 @@ class Viv:
         ):
             self._install_local_src(sha256, src, cli, yes)
 
-    def manage_purge(
+    def cmd_manage_purge(
         self,
         ref: str,
         src: Path,
@@ -1570,7 +1570,7 @@ class Viv:
         default = re.split(r"[=><~!*]+", reqs[0])[0]
         return default, (default if not bin else bin)
 
-    def shim(
+    def cmd_shim(
         self,
         reqs: List[str],
         requirements: Path,
@@ -1661,7 +1661,7 @@ class Viv:
 
                 subprocess_run_quit([vivenv.python, scriptpath, *rest])
 
-    def run(
+    def cmd_run(
         self,
         reqs: List[str],
         requirements: Path,
@@ -1968,7 +1968,8 @@ class Cli:
     ) -> ArgumentParser:
         aliases = kwargs.pop("aliases", [name[0]])
 
-        cmd = getattr(self.viv, attr if attr else name)
+        cmd = getattr(self.viv, attr if attr else f"cmd_{name}")
+
         parser: ArgumentParser = subparsers.add_parser(
             name,
             help=cmd.__doc__.splitlines()[0],
@@ -2006,7 +2007,7 @@ class Cli:
                             for k in self.cmd_arg_group_map[f"{cmd}_{subcmd}"]
                         ],
                         **kwargs,
-                    ).set_defaults(func=getattr(self.viv, f"{cmd}_{subcmd}"))
+                    ).set_defaults(func=getattr(self.viv, f"cmd_{cmd}_{subcmd}"))
 
             else:
                 self._get_subcmd_parser(
