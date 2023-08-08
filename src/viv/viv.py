@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-12-g6bf2ae4-dev"
+__version__ = "23.8a1-14-g3201e56-dev"
 
 
 class Spinner:
@@ -838,7 +838,7 @@ class ViVenv:
             spec = self._validate_spec(spec)
         id = id if id else get_hash(spec, track_exe)
 
-        self.name = name if name else self.id[:8]
+        self.name = name if name else id[:8]
         self.set_path(path)
 
         if not metadata:
@@ -1262,6 +1262,8 @@ class Viv:
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
         matches: List[ViVenv] = []
         for k, v in self.vivenvs.items():
+            if name_id == v.meta.id:
+                matches.append(v)
             if name_id == k or v.name == name_id:
                 matches.append(v)
             elif k.startswith(name_id) or (
