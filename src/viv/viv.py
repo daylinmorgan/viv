@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-7-ge8f6228-dev"
+__version__ = "23.8a2-8-g95531c3-dev"
 
 
 class Spinner:
@@ -1226,6 +1226,13 @@ class Cache:
                 if str(p) in vivenv.meta.files
             }
 
+    def _filter_spec(self, spec: str) -> Set[ViVenv]:
+        return {
+            vivenv
+            for _, vivenv in self.vivenvs.items()
+            if spec in ", ".join(vivenv.meta.spec)
+        }
+
     def filter(self, filters: Dict[str, str]) -> Dict[str, ViVenv]:
         vivenv_sets = []
 
@@ -1233,9 +1240,11 @@ class Cache:
             if "-" in k:  # date-based filters all have hyphen
                 (date_name, when) = k.split("-")
                 vivenv_sets.append(self._filter_date(date_name, when, _parse_date(v)))
-            else:
+            elif k == "files":
                 vivenv_sets.append(self._filter_file(v))
 
+            elif k == "spec":
+                vivenv_sets.append(self._filter_spec(v))
         if vivenv_sets:
             return {vivenv.name: vivenv for vivenv in set.union(*vivenv_sets)}
         else:
@@ -1750,6 +1759,7 @@ class Cli:
                     "accessed-before",
                     "accessed-after",
                     "files",
+                    "spec",
                 ],
             ),
         ],
@@ -2022,7 +2032,7 @@ class Cli:
             args.rest = sys.argv[i + 1 :]
         else:
             args = self.parser.parse_args()
-            if args.func.__name__ in ("run", "exe"):
+            if args.func.__name__ in ("cmd_run", "cmd_exe"):
                 args.rest = []
 
         self._validate_args(args)
