@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-10-g7cedb07-dev"
+__version__ = "23.8a1-10-gdadf4da-dev"
 
 
 class Spinner:
@@ -1698,8 +1698,11 @@ class Viv:
 
 
 class Arg:
-    def __init__(self, *args: str, **kwargs: Any) -> None:
-        self.args = args
+    def __init__(self, *args, flag: str = None, **kwargs: Any) -> None:
+        if flag:
+            self.args = [f"-{flag[0]}", f"--{flag}"]
+        else:
+            self.args = args
         self.kwargs = kwargs
 
 
@@ -1707,20 +1710,17 @@ class Cli:
     args = {
         ("list",): [
             Arg(
-                "-v",
-                "--verbose",
+                flag="verbose",
                 help="pretty print full metadata for vivenvs",
                 action="store_true",
             ),
             Arg(
-                "-q",
-                "--quiet",
+                flag="quiet",
                 help="show only ids",
                 action="store_true",
             ),
             Arg(
-                "-f",
-                "--filter",
+                flag="filter",
                 help="filter vivenvs based on key:val",
                 metavar="<key:value>",
                 action=KVAppendAction,
@@ -1735,14 +1735,12 @@ class Cli:
         ],
         ("shim",): [
             Arg(
-                "-f",
-                "--freeze",
+                flag="freeze",
                 help="freeze/resolve all dependencies",
                 action="store_true",
             ),
             Arg(
-                "-o",
-                "--output",
+                flag="output",
                 help="path/to/output file",
                 type=Path,
                 metavar="<path>",
@@ -1750,15 +1748,12 @@ class Cli:
         ],
         ("cache_info",): [
             Arg(
-                "-p",
-                "--path",
+                flag="path",
                 help="print the absolute path to the vivenv",
                 action="store_true",
             ),
         ],
-        ("run",): [
-            Arg("-s", "--script", help="remote script to run", metavar="<script>")
-        ],
+        ("run",): [Arg(flag="script", help="remote script to run", metavar="<script>")],
         ("exe", "cache_info"): [
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
@@ -1773,14 +1768,12 @@ class Cli:
         ],
         ("freeze", "shim"): [
             Arg(
-                "-p",
-                "--path",
+                flag="path",
                 help="generate line to add viv to sys.path",
                 choices=["abs", "rel"],
             ),
             Arg(
-                "-s",
-                "--standalone",
+                flag="standalone",
                 help="generate standalone activation function",
                 action="store_true",
             ),
@@ -1788,8 +1781,7 @@ class Cli:
         ("run", "freeze", "shim"): [
             Arg("reqs", help="requirements specifiers", nargs="*"),
             Arg(
-                "-r",
-                "--requirements",
+                flag="requirements",
                 help="path/to/requirements.txt file",
                 metavar="<path>",
                 type=Path,
@@ -1797,45 +1789,40 @@ class Cli:
         ],
         ("run", "freeze"): [
             Arg(
-                "-k",
-                "--keep",
+                flag="keep",
                 help="preserve environment",
                 action="store_true",
             ),
         ],
         ("run", "shim"): [
-            Arg("-b", "--bin", help="console_script/script to invoke", metavar="<bin>"),
+            Arg(flag="bin", help="console_script/script to invoke", metavar="<bin>"),
         ],
         ("manage_purge", "manage_update", "manage_install"): [
             Arg(
-                "-r",
-                "--ref",
+                flag="ref",
                 help="git reference (branch/tag/commit)",
                 default="latest",
                 metavar="<ref>",
             ),
             Arg(
-                "-s",
-                "--src",
+                flag="src",
                 help="path/to/source_file",
                 default=Cfg().src,
                 metavar="<src>",
             ),
             Arg(
-                "-c",
-                "--cli",
+                flag="cli",
                 help="path/to/cli (symlink to src)",
                 default=Path.home() / ".local" / "bin" / "viv",
                 metavar="<cli>",
             ),
         ],
         ("shim", "manage_purge", "manage_update", "manage_install"): [
-            Arg("-y", "--yes", help="respond yes to all prompts", action="store_true")
+            Arg(flag="yes", help="respond yes to all prompts", action="store_true")
         ],
         ("manage_show",): [
             Arg(
-                "-p",
-                "--pythonpath",
+                flag="pythonpath",
                 help="show the path/to/install",
                 action="store_true",
             )
