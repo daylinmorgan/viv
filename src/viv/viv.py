@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-11-gc453b8f-dev"
+__version__ = "23.8a1-12-g6bf2ae4-dev"
 
 
 class Spinner:
@@ -1708,18 +1708,26 @@ class Arg:
         self.kwargs = kwargs
 
 
+class BoolArg(Arg):
+    def __init__(self, *args, **kwargs: Any) -> None:
+        super(BoolArg, self).__init__(*args, action="store_true", **kwargs)
+
+
+class PathArg(Arg):
+    def __init__(self, *args, **kwargs: Any) -> None:
+        super(PathArg, self).__init__(*args, metavar="<path>", type=Path, **kwargs)
+
+
 class Cli:
     args = {
         ("list",): [
-            Arg(
+            BoolArg(
                 flag="verbose",
                 help="pretty print full metadata for vivenvs",
-                action="store_true",
             ),
-            Arg(
+            BoolArg(
                 flag="quiet",
                 help="show only ids",
-                action="store_true",
             ),
             Arg(
                 flag="filter",
@@ -1736,34 +1744,34 @@ class Cli:
             ),
         ],
         ("shim",): [
-            Arg(
+            BoolArg(
                 flag="freeze",
                 help="freeze/resolve all dependencies",
-                action="store_true",
             ),
-            Arg(
+            PathArg(
                 flag="output",
                 help="path/to/output file",
-                type=Path,
-                metavar="<path>",
             ),
         ],
         ("cache_info",): [
-            Arg(
+            BoolArg(
                 flag="path",
                 help="print the absolute path to the vivenv",
-                action="store_true",
             ),
         ],
-        ("run",): [Arg(flag="script", help="remote script to run", metavar="<script>")],
+        ("run",): [
+            PathArg(
+                flag="script",
+                help="remote script to run",
+            )
+        ],
         ("exe", "cache_info"): [
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
         ("list", "cache_info"): [
-            Arg(
+            BoolArg(
                 "--json",
                 help="name:metadata json for vivenvs ",
-                action="store_true",
                 default=False,
                 dest="use_json",
             )
@@ -1774,26 +1782,22 @@ class Cli:
                 help="generate line to add viv to sys.path",
                 choices=["abs", "rel"],
             ),
-            Arg(
+            BoolArg(
                 flag="standalone",
                 help="generate standalone activation function",
-                action="store_true",
             ),
         ],
         ("run", "freeze", "shim"): [
             Arg("reqs", help="requirements specifiers", nargs="*"),
-            Arg(
+            PathArg(
                 flag="requirements",
                 help="path/to/requirements.txt file",
-                metavar="<path>",
-                type=Path,
             ),
         ],
         ("run", "freeze"): [
-            Arg(
+            BoolArg(
                 flag="keep",
                 help="preserve environment",
-                action="store_true",
             ),
         ],
         ("run", "shim"): [
@@ -1806,27 +1810,24 @@ class Cli:
                 default="latest",
                 metavar="<ref>",
             ),
-            Arg(
+            PathArg(
                 flag="src",
                 help="path/to/source_file",
                 default=Cfg().src,
-                metavar="<src>",
             ),
-            Arg(
+            PathArg(
                 flag="cli",
                 help="path/to/cli (symlink to src)",
                 default=Path.home() / ".local" / "bin" / "viv",
-                metavar="<cli>",
             ),
         ],
         ("shim", "manage_purge", "manage_update", "manage_install"): [
-            Arg(flag="yes", help="respond yes to all prompts", action="store_true")
+            BoolArg(flag="yes", help="respond yes to all prompts")
         ],
         ("manage_show",): [
-            Arg(
+            BoolArg(
                 flag="pythonpath",
                 help="show the path/to/install",
-                action="store_true",
             )
         ],
         ("exe",): [
