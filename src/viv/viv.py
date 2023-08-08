@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-2-gd26c0b1-dev"
+__version__ = "23.8a2-3-g821a335-dev"
 
 
 class Spinner:
@@ -765,6 +765,11 @@ def subprocess_run(
 
     else:
         return ""
+
+
+def subprocess_run_quit(command: List[str], **kwargs: Any) -> None:
+    log.debug("executing subcmd:\n  " + " ".join(map(str, command)))
+    sys.exit(subprocess.run(command, **kwargs).returncode)
 
 
 def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
@@ -1635,11 +1640,7 @@ class Viv:
             if viv_used:
                 env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
 
-                sys.exit(
-                    subprocess.run(
-                        [sys.executable, scriptpath, *rest], env=env
-                    ).returncode
-                )
+                subprocess_run_quit([sys.executable, scriptpath, *rest], env=env)
             else:
                 vivenv = ViVenv(spec + deps)
                 if not vivenv.loaded or Env().viv_force:
@@ -1649,7 +1650,7 @@ class Viv:
                 vivenv.touch()
                 vivenv.meta.write()
 
-                sys.exit(subprocess.run([vivenv.python, scriptpath, *rest]).returncode)
+                subprocess_run_quit([vivenv.python, scriptpath, *rest])
 
     def run(
         self,
@@ -1688,11 +1689,7 @@ class Viv:
                         vivenv.create()
                         vivenv.install_pkgs()
                         vivenv.bin_exists(bin)
-                        sys.exit(
-                            subprocess.run(
-                                [vivenv.path / "bin" / bin, *rest]
-                            ).returncode
-                        )
+                        subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
                 else:
                     vivenv.create()
                     vivenv.install_pkgs()
@@ -1700,7 +1697,7 @@ class Viv:
             vivenv.touch()
             vivenv.meta.write()
             vivenv.bin_exists(bin)
-            sys.exit(subprocess.run([vivenv.path / "bin" / bin, *rest]).returncode)
+            subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
 
 
 class Arg:
