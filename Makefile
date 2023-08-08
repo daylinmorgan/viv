@@ -5,7 +5,7 @@ lint: ## run pre-commit hooks
 	pdm run pre-commit run --all || pdm run pre-commit run --all
 
 types: ## run mypy
-	mypy src/viv
+	pdm run mypy src/viv
 
 bump: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
@@ -23,7 +23,7 @@ dev-install:
 	ln -sf $(PWD)/src/viv/viv.py ~/.local/share/viv/viv.py
 
 docs: docs/index.md docs/viv.py ## build docs
-	mkdocs build
+	pdm run mkdocs build
 
 docs/viv.py: src/viv/viv.py
 	cp $< $@
