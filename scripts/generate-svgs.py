@@ -16,7 +16,6 @@ CLI_DOC_PATH = DOCS_PATH / "cli.md"
         (
             "list",
             "exe",
-            "remove",
             "manage",
             "freeze",
             "shim",
@@ -24,7 +23,9 @@ CLI_DOC_PATH = DOCS_PATH / "cli.md"
         ),
         [],
     )
-).update({"manage": ["update", "purge", "show", "install"]})
+).update(
+    {"manage": ["update", "purge", "show", "install"], "cache": ["info", "remove"]},
+)
 
 
 cli_doc = """

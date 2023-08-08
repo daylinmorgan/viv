@@ -9,9 +9,6 @@
 ## exe
 ![cmd](./svgs/viv-exe-help.svg)
 
-## remove
-![cmd](./svgs/viv-remove-help.svg)
-
 ## manage
 ![cmd](./svgs/viv-manage-help.svg)
 
@@ -35,3 +32,12 @@
 
 ## run
 ![cmd](./svgs/viv-run-help.svg)
+
+## cache
+![cmd](./svgs/viv-cache-help.svg)
+
+### cache info
+![cmd](./svgs/viv-cache-info-help.svg)
+
+### cache remove
+![cmd](./svgs/viv-cache-remove-help.svg)
