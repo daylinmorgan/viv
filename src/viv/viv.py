@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3"
+__version__ = "23.8a3-dev"
 
 
 class Spinner:
@@ -1882,7 +1882,7 @@ class Cli:
     ).update(
         {
             cmd: {
-                subcmd: {"help": help, "aliases": [subcmd[0]]}
+                subcmd: dict(description=help, aliases=[subcmd[0]])
                 for subcmd, help in subcmd_help
             }
             for cmd, subcmd_help in (
@@ -2019,7 +2019,9 @@ class Cli:
             if subcmds:
                 subcmd_p = self._get_subcmd_parser(cmd_p, cmd)
                 subcmd_cmd_p = subcmd_p.add_subparsers(
-                    title="subcommand", metavar="<sub-cmd>", required=True
+                    title="subcommand",
+                    metavar="<sub-cmd>",
+                    required=True,
                 )
                 for subcmd, kwargs in subcmds.items():
                     subcmd_cmd_p.add_parser(
