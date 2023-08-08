@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-1-g5707938-dev"
+__version__ = "23.8a2-2-gd26c0b1-dev"
 
 
 class Spinner:
@@ -714,7 +714,7 @@ class ArgumentParser(StdArgParser):
         sys.exit(2)
 
 
-def run(
+def subprocess_run(
     command: List[str],
     spinmsg: str = "",
     clean_up_path: Optional[Path] = None,
@@ -920,7 +920,7 @@ class ViVenv:
         if not Env().viv_no_setuptools and "setuptools" not in self.meta.spec:
             cmd.append("setuptools")
 
-        run(
+        subprocess_run(
             cmd,
             spinmsg="installing packages in vivenv",
             clean_up_path=self.path,
@@ -1038,7 +1038,9 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
         "-",
     ] + spec
 
-    report = json.loads(run(cmd, check_output=True, spinmsg="resolving depedencies"))
+    report = json.loads(
+        subprocess_run(cmd, check_output=True, spinmsg="resolving depedencies")
+    )
     resolved_spec = [
         f"{pkg['metadata']['name']}=={pkg['metadata']['version']}"
         for pkg in report["install"]
@@ -1398,7 +1400,8 @@ class Viv:
 
         full_cmd = [str(bin), *rest]
 
-        run(full_cmd, verbose=True)
+        # TODO: use subprocess_run_quit
+        subprocess_run(full_cmd, verbose=True)
 
     def cache_info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
         """get metadata about a vivenv"""
@@ -1592,10 +1595,10 @@ class Viv:
             make_executable(output)
 
     def _run_script(
-        self, spec: List[str], script: str, keep: bool, rest: List[str]
+        self, spec: List[str], script: Path, keep: bool, rest: List[str]
     ) -> None:
         env = os.environ
-        name = script.split("/")[-1]
+        name = script.name.split("/")[-1]
 
         # TODO: reduce boilerplate and dry out
         with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
