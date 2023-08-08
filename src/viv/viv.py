@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-5-g3f8ddd3-dev"
+__version__ = "23.8a2-6-g0ad0447-dev"
 
 
 class Spinner:
@@ -1370,8 +1370,8 @@ class Viv:
               --filter "accessed-after:2023-08-01"`
           `viv list -q --filter \\
             "created-before:$(date -d '2 weeks ago' +'%Y-%m-%d')"`
-          `viv list --filter "file:./script.py"`
-          `viv list --filter "file:None"`
+          `viv list --filter "files:./script.py"`
+          `viv list --filter "files:None"`
         """
 
         if filter:
