@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-8-g95531c3-dev"
+__version__ = "23.8a2-9-g7a0f3d6-dev"
 
 
 class Spinner:
@@ -1138,15 +1138,27 @@ def _read_metadata_block(txt: str) -> Generator[Tuple[str, str, List[str]], None
             yield block_type, extra, block_data
 
 
-def deps_block(txt: str) -> List[str]:
-    return list(
-        (
-            req
-            for block_type, extra, block_data in _read_metadata_block(txt)
-            for req in block_data
-            if block_type == "Script Dependencies"
-        )
-    )
+DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
+
+
+def read_dependency_block(txt: str) -> List[str]:
+    lines = iter(txt.splitlines())
+    for line in lines:
+        if re.match(DEPENDENCY_BLOCK_MARKER, line):
+            for line in lines:
+                if not line.startswith("#"):
+                    break
+                # Remove comments. An inline comment is introduced by
+                # a hash, which must be preceded and followed by a
+                # space. The initial hash will be skipped as it has
+                # no space before it.
+                line = line.split(" # ", maxsplit=1)[0]
+                line = line[1:].strip()
+                if not line:
+                    continue
+                # let pip handle the requirement errors
+                yield line
+            break
 
 
 def _parse_date(txt: str) -> datetime:
@@ -1641,7 +1653,7 @@ class Viv:
                 script_text = fetch_script(script)
 
             viv_used = uses_viv(script_text)
-            deps = deps_block(script_text)
+            deps = list(read_dependency_block(script_text))
 
             if viv_used and deps:
                 error(
