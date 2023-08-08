@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a1-10-gdadf4da-dev"
+__version__ = "23.8a1-11-gc453b8f-dev"
 
 
 class Spinner:
@@ -838,7 +838,7 @@ class ViVenv:
             spec = self._validate_spec(spec)
         id = id if id else get_hash(spec, track_exe)
 
-        self.name = name if name else id[:8]
+        self.name = name if name else self.id[:8]
         self.set_path(path)
 
         if not metadata:
@@ -1363,7 +1363,9 @@ class Viv:
             vivenvs = self._cache.vivenvs
 
         if quiet:
-            sys.stdout.write("\n".join(vivenvs) + "\n")
+            sys.stdout.write(
+                "\n".join((vivenv.meta.id for _, vivenv in vivenvs.items())) + "\n"
+            )
         elif len(self._cache.vivenvs) == 0:
             log.info("no vivenvs setup")
         elif len(vivenvs) == 0 and filter:
