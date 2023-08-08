@@ -46,14 +46,16 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
+    Set,
     TextIO,
     Tuple,
     Type,
+    Union,
 )
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2-3-g821a335-dev"
+__version__ = "23.8a2-5-g3f8ddd3-dev"
 
 
 class Spinner:
@@ -322,7 +324,7 @@ def gen_logger() -> logging.Logger:
 log = gen_logger()
 
 
-def err_quit(*msg: str, code: int = 1) -> None:
+def err_quit(*msg: str, code: int = 1) -> NoReturn:
     log.error("\n".join(msg))
     sys.exit(code)
 
@@ -668,12 +670,19 @@ class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
 
 
 class KVAppendAction(Action):
-    def __init__(self, *args, keys, **kwargs):
+    def __init__(self, *args: Any, keys: List[str], **kwargs: Any) -> None:
         self._keys = keys
         super(KVAppendAction, self).__init__(*args, **kwargs)
 
-    # TODO: add choices option to class?
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: StdArgParser,
+        namespace: Namespace,
+        values: Union[str, Sequence[Any], None],
+        option_string: str | None = None,
+    ) -> None:
+        if not isinstance(values, str):
+            raise TypeError("expected string for `values`")
         try:
             (k, v) = values.split(":")
             if k not in self._keys:
@@ -767,7 +776,7 @@ def subprocess_run(
         return ""
 
 
-def subprocess_run_quit(command: List[str], **kwargs: Any) -> None:
+def subprocess_run_quit(command: List[str | Path], **kwargs: Any) -> None:
     log.debug("executing subcmd:\n  " + " ".join(map(str, command)))
     sys.exit(subprocess.run(command, **kwargs).returncode)
 
@@ -1190,7 +1199,7 @@ class Cache:
         else:
             return vivenv_date > date
 
-    def _filter_date(self, date_name: str, when: str, date: datetime) -> List[ViVenv]:
+    def _filter_date(self, date_name: str, when: str, date: datetime) -> Set[ViVenv]:
         return {
             vivenv
             for _, vivenv in self.vivenvs.items()
@@ -1202,7 +1211,7 @@ class Cache:
             )
         }
 
-    def _filter_file(self, file: str) -> List[ViVenv]:
+    def _filter_file(self, file: str) -> Set[ViVenv]:
         if file == "None":
             return {
                 vivenv for _, vivenv in self.vivenvs.items() if vivenv.files_exist()
@@ -1217,7 +1226,7 @@ class Cache:
                 if str(p) in vivenv.meta.files
             }
 
-    def filter(self, filters=Dict[str, str]) -> Dict[str, ViVenv]:
+    def filter(self, filters: Dict[str, str]) -> Dict[str, ViVenv]:
         vivenv_sets = []
 
         for k, v in filters.items():
@@ -1351,7 +1360,7 @@ class Viv:
         quiet: bool,
         verbose: bool,
         use_json: bool,
-        filter: List[str],
+        filter: Dict[str, str],
     ) -> None:
         """\
         list vivenvs
@@ -1425,7 +1434,7 @@ class Viv:
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         log.info("updating local source copy of viv")
-        shutil.copy(Cache().src / f"{sha256}.py", src)
+        shutil.copy(Cfg().cache_src / f"{sha256}.py", src)
         make_executable(src)
         log.info("symlinking cli")
 
@@ -1445,7 +1454,7 @@ class Viv:
         )
 
     def _get_new_version(self, ref: str) -> Tuple[str, str]:
-        sys.path.append(str(Cache().src))
+        sys.path.append(str(Cfg().cache_src))
         return (sha256 := fetch_source(ref)), __import__(sha256).__version__
 
     def manage(self) -> None:
@@ -1527,8 +1536,8 @@ class Viv:
         yes: bool,
     ) -> None:
         to_remove = []
-        if Cache().base.is_dir():
-            to_remove.append(Cache().base)
+        if Cfg().cache_base.is_dir():
+            to_remove.append(Cfg().cache_base)
         if src.is_file():
             to_remove.append(src.parent if src == (Cfg().src) else src)
         if self.local_source and self.local_source.is_file():
@@ -1600,10 +1609,10 @@ class Viv:
             make_executable(output)
 
     def _run_script(
-        self, spec: List[str], script: Path, keep: bool, rest: List[str]
+        self, spec: List[str], script: str, keep: bool, rest: List[str]
     ) -> None:
         env = os.environ
-        name = script.name.split("/")[-1]
+        name = script.split("/")[-1]
 
         # TODO: reduce boilerplate and dry out
         with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
@@ -1701,26 +1710,26 @@ class Viv:
 
 
 class Arg:
-    def __init__(self, *args, flag: str = None, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, flag: str | None = None, **kwargs: Any) -> None:
         if flag:
-            self.args = [f"-{flag[0]}", f"--{flag}"]
+            self.args: Tuple[Any, ...] = (f"-{flag[0]}", f"--{flag}")
         else:
             self.args = args
         self.kwargs = kwargs
 
 
 class BoolArg(Arg):
-    def __init__(self, *args, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(BoolArg, self).__init__(*args, action="store_true", **kwargs)
 
 
 class PathArg(Arg):
-    def __init__(self, *args, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super(PathArg, self).__init__(*args, metavar="<path>", type=Path, **kwargs)
 
 
 class Cli:
-    args = {
+    args: Dict[Tuple[str, ...], List[Arg]] = {
         ("list",): [
             BoolArg(
                 flag="verbose",
@@ -1760,12 +1769,7 @@ class Cli:
                 help="print the absolute path to the vivenv",
             ),
         ],
-        ("run",): [
-            PathArg(
-                flag="script",
-                help="remote script to run",
-            )
-        ],
+        ("run",): [Arg(flag="script", help="script to execute", metavar="<path/url>")],
         ("exe", "cache_info"): [
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
