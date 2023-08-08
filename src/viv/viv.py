@@ -53,7 +53,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a2"
+__version__ = "23.8a2-1-g5707938-dev"
 
 
 class Spinner:
@@ -1263,7 +1263,7 @@ class Viv:
         for k, v in self.vivenvs.items():
             if name_id == v.meta.id:
                 matches.append(v)
-            if name_id == k or v.name == name_id:
+            elif name_id == k or v.name == name_id:
                 matches.append(v)
             elif k.startswith(name_id) or (
                 v.meta.id.startswith(name_id) and v.meta.id == v.name
