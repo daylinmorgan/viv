@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-5-g5ae4cf5-dev"
+__version__ = "23.8a3-5-gd3e1afd-dev"
 
 
 class Spinner:
@@ -956,6 +956,15 @@ class ViVenv:
     def files_exist(self) -> bool:
         return len([f for f in self.meta.files if Path(f).is_file()]) == 0
 
+    def get_size(self) -> None:
+        size = sum(p.stat().st_size for p in Path(self.path).rglob("*"))
+        for unit in ("B", "K", "M", "G", "T"):
+            if size < 1024:
+                break
+            size /= 1024
+
+        self.size = f"{size:.1f}{unit}B"
+
     @contextmanager
     def use(self, keep: bool = True) -> None:
         run_mode = Env().viv_run_mode
@@ -984,11 +993,18 @@ class ViVenv:
             if self.meta.id == self.name
             else (self.name[:5] + "..." if len(self.name) > 8 else self.name)
         )
+        size = getattr(self, "size", None)
+        line = []
+        if size:
+            line.append(f"""{a.yellow}{size}{a.end}""")
 
-        sys.stdout.write(
-            f"""{a.bold}{a.cyan}{_id}{a.end} """
-            f"""{a.style(", ".join(self.meta.spec),'dim')}\n"""
+        line.extend(
+            (
+                f"""{a.bold}{a.cyan}{_id}{a.end}""",
+                f"""{a.style(", ".join(self.meta.spec),'dim')}""",
+            )
         )
+        sys.stdout.write(" ".join(line) + "\n")
 
     def _tree_leaves(self, items: List[str], indent: str = "") -> str:
         tree_chars = ["├"] * (len(items) - 1) + ["╰"]
@@ -1006,6 +1022,11 @@ class ViVenv:
                     "created": self.meta.created,
                     "accessed": self.meta.accessed,
                 },
+                **(
+                    {"size": getattr(self, "size", None)}
+                    if getattr(self, "size", None)
+                    else {}
+                ),
                 **({"exe": self.meta.exe} if self.meta.exe != "N/A" else {}),
                 **({"files": ""} if self.meta.files else {}),
             }.items()
@@ -1398,6 +1419,7 @@ class Viv:
         verbose: bool,
         use_json: bool,
         filter: Dict[str, str],
+        size: bool,
     ) -> None:
         """\
         list vivenvs
@@ -1420,7 +1442,13 @@ class Viv:
             sys.stdout.write(
                 "\n".join((vivenv.meta.id for _, vivenv in vivenvs.items())) + "\n"
             )
-        elif len(self._cache.vivenvs) == 0:
+            sys.exit(0)
+
+        if size:
+            for _, vivenv in vivenvs.items():
+                vivenv.get_size()
+
+        if len(self._cache.vivenvs) == 0:
             log.info("no vivenvs setup")
         elif len(vivenvs) == 0 and filter:
             log.info("no vivenvs match filter")
@@ -1454,7 +1482,9 @@ class Viv:
         # TODO: use subprocess_run_quit
         subprocess_run(full_cmd, verbose=True)
 
-    def cmd_cache_info(self, vivenv_id: str, path: bool, use_json: bool) -> None:
+    def cmd_cache_info(
+        self, vivenv_id: str, path: bool, use_json: bool, size: bool
+    ) -> None:
         """get metadata about a vivenv"""
         vivenv = self._match_vivenv(vivenv_id)
         metadata_file = vivenv.path / "vivmeta.json"
@@ -1467,7 +1497,7 @@ class Viv:
         elif path:
             sys.stdout.write(f"{vivenv.path.absolute()}\n")
         else:
-            vivenv.tree()
+            vivenv.tree(size=size)
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         log.info("updating local source copy of viv")
@@ -1804,12 +1834,13 @@ class Cli:
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
         ("list", "cache_info"): [
+            BoolArg(flag="size", help="calculate size of vivenvs"),
             BoolArg(
                 "--json",
                 help="name:metadata json for vivenvs ",
                 default=False,
                 dest="use_json",
-            )
+            ),
         ],
         ("freeze", "shim"): [
             Arg(
