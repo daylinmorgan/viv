@@ -42,7 +42,6 @@ from types import TracebackType
 from typing import (
     Any,
     Dict,
-    Generator,
     List,
     NoReturn,
     Optional,
@@ -56,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-6-g5b397c0-dev"
+__version__ = "23.8a3-7-g560871e-dev"
 
 
 class Spinner:
@@ -1102,6 +1101,7 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
 
 def fetch_script(url: str) -> str:
     try:
+        log.debug(f"fetching from remote url: {url}")
         r = urlopen(url)
     except (HTTPError, ValueError) as e:
         err_quit(
@@ -1126,6 +1126,7 @@ def fetch_source(reference: str) -> str:
     cached_src_file = Cfg().cache_src / f"{sha256}.py"
 
     if not cached_src_file.is_file():
+        log.debug("updating source script")
         cached_src_file.write_text(src)
 
     return sha256
@@ -1153,26 +1154,6 @@ def uses_viv(txt: str) -> bool:
             re.VERBOSE | re.MULTILINE,
         )
     )
-
-
-def _read_metadata_block(txt: str) -> Generator[Tuple[str, str, List[str]], None, None]:
-    """check for pep722 style metadata block and parse"""
-
-    lines = iter(txt.splitlines())
-    for line in lines:
-        if line.startswith("##"):
-            block_type, sep, extra = line[2:].strip().partition(":")
-            if not sep:
-                continue
-            block_data = []
-            for line in lines:
-                if not line.startswith("##"):
-                    break
-                line = line[2:].strip()
-                if not line:
-                    continue
-                block_data.append(line)
-            yield block_type, extra, block_data
 
 
 DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
