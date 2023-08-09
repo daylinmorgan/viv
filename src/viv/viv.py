@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-5-gd3e1afd-dev"
+__version__ = "23.8a3-6-g5b397c0-dev"
 
 
 class Spinner:
@@ -1701,9 +1701,8 @@ class Viv:
 
             if not self.local_source and viv_used:
                 (tmppath / "viv.py").write_text(
-                    # TODO: use latest tag once ready
                     fetch_script(
-                        "https://raw.githubusercontent.com/daylinmorgan/viv/dev/src/viv/viv.py"
+                        "https://raw.githubusercontent.com/daylinmorgan/viv/latest/src/viv/viv.py"
                     )
                 )
 
