@@ -32,6 +32,7 @@ from argparse import (
     _SubParsersAction,
 )
 from argparse import ArgumentParser as StdArgParser
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -55,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-2-g9079ecf-dev"
+__version__ = "23.8a3-5-g5ae4cf5-dev"
 
 
 class Spinner:
@@ -122,6 +123,7 @@ def _path_ok(p: Path) -> Path:
 class Env:
     defaults = dict(
         viv_bin_dir=Path.home() / ".local" / "bin",
+        viv_run_mode="ephemeral",
         xdg_cache_home=Path.home() / ".cache",
         xdg_data_home=Path.home() / ".local" / "share",
     )
@@ -954,6 +956,28 @@ class ViVenv:
     def files_exist(self) -> bool:
         return len([f for f in self.meta.files if Path(f).is_file()]) == 0
 
+    @contextmanager
+    def use(self, keep: bool = True) -> None:
+        run_mode = Env().viv_run_mode
+        _path = self.path
+        try:
+            if keep or run_mode == "persist":
+                yield
+            elif run_mode == "ephemeral":
+                with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+                    self.set_path(Path(tmpdir))
+                    yield
+            elif run_mode == "semi-ephemeral":
+                (
+                    ephemeral_cache := (
+                        Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
+                    )
+                ).mkdir(exist_ok=True, parents=True)
+                self.set_path(ephemeral_cache / self.name)
+                yield
+        finally:
+            self.set_path(_path)
+
     def show(self) -> None:
         _id = (
             self.meta.id[:8]
@@ -1022,14 +1046,6 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
     vivenv.activate()
 
     return vivenv.path
-
-
-def get_venvs() -> Dict[str, ViVenv]:
-    vivenvs = {}
-    for p in Cfg().cache_venv.iterdir():
-        vivenv = ViVenv.load(p.name)
-        vivenvs[vivenv.name] = vivenv
-    return vivenvs
 
 
 def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
@@ -1635,17 +1651,9 @@ class Viv:
         env = os.environ
         name = script.split("/")[-1]
 
-        # TODO: reduce boilerplate and dry out
         with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
             tmppath = Path(tmpdir)
             scriptpath = tmppath / name
-            if not self.local_source:
-                (tmppath / "viv.py").write_text(
-                    # TODO: use latest tag once ready
-                    fetch_script(
-                        "https://raw.githubusercontent.com/daylinmorgan/viv/dev/src/viv/viv.py"
-                    )
-                )
 
             if Path(script).is_file():
                 script_text = Path(script).read_text()
@@ -1659,6 +1667,14 @@ class Viv:
                 error(
                     "Script Dependencies block and "
                     "`viv` API can't be used in the same script"
+                )
+
+            if not self.local_source and viv_used:
+                (tmppath / "viv.py").write_text(
+                    # TODO: use latest tag once ready
+                    fetch_script(
+                        "https://raw.githubusercontent.com/daylinmorgan/viv/dev/src/viv/viv.py"
+                    )
                 )
 
             scriptpath.write_text(script_text)
@@ -1708,26 +1724,18 @@ class Viv:
             _, bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
 
-            # TODO: respect a VIV_RUN_MODE env variable as the same as keep i.e.
-            # ephemeral (default), semi-ephemeral (persist inside /tmp), or
-            # persist (use c.cache)
-
             if not vivenv.loaded or Env().viv_force:
-                if not keep:
-                    with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-                        vivenv.set_path(Path(tmpdir))
-                        vivenv.create()
-                        vivenv.install_pkgs()
-                        vivenv.bin_exists(bin)
-                        subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
-                else:
+                with vivenv.use(keep=keep):
                     vivenv.create()
                     vivenv.install_pkgs()
+                    vivenv.bin_exists(bin)
 
-            vivenv.touch()
-            vivenv.meta.write()
-            vivenv.bin_exists(bin)
-            subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
+                    # TODO: refactor this logic elsewhere
+                    if keep or Env().run_mode != "ephemeral":
+                        vivenv.touch()
+                        vivenv.meta.write(vivenv.path / "vivmeta.json")
+
+                    subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
 
 
 class Arg:
