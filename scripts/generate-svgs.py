@@ -39,22 +39,21 @@ def yartsu(output: Path, args: Tuple[str, str] | str) -> None:
     if isinstance(args, str):
         args = (args,)
     cmd = [
-        VIV,
-        "run",
-        "-k",
-        "yartsu",
-        "--",
-        "-w",
-        "70",
-        "-o",
-        output,
-        "--",
         "viv",
         *args,
         "--help",
+        "|",
+        "yartsu",
+        "-w",
+        "70",
+        "-o",
+        str(output),
     ]
-    run(cmd)
+    run(" ".join(cmd), shell=True)
 
+
+if not SAVE_PATH.is_dir():
+    SAVE_PATH.mkdir(exist_ok=True, parents=True)
 
 yartsu(SAVE_PATH / "viv-help.svg", "")
 for cmd, subcmds in cmds.items():

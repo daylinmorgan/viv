@@ -22,7 +22,9 @@ jobs:
         run: pdm install
 
       - name: Build Docs
-        run: pdm run make docs
+        run: |
+          make svgs
+          make docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2

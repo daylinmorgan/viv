@@ -25,6 +25,9 @@ dev-install:
 docs: docs/index.md docs/viv.py ## build docs
 	pdm run mkdocs build
 
+svgs: ## build svgs for docs
+	pdm run python ./scripts/generate-svgs.py
+
 docs/viv.py: src/viv/viv.py
 	cp $< $@
 
