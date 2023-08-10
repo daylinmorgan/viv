@@ -42,6 +42,7 @@ from types import TracebackType
 from typing import (
     Any,
     Dict,
+    Generator,
     List,
     NoReturn,
     Optional,
@@ -55,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-16-gcbef848-dev"
+__version__ = "23.8a3-17-g7b5d4ad-dev"
 
 
 class Spinner:
@@ -956,7 +957,7 @@ class ViVenv:
         return len([f for f in self.meta.files if Path(f).is_file()]) == 0
 
     def get_size(self) -> None:
-        size = sum(p.stat().st_size for p in Path(self.path).rglob("*"))
+        size = float(sum(p.stat().st_size for p in Path(self.path).rglob("*")))
         for unit in ("B", "K", "M", "G", "T"):
             if size < 1024:
                 break
@@ -965,7 +966,7 @@ class ViVenv:
         self.size = f"{size:.1f}{unit}B"
 
     @contextmanager
-    def use(self, keep: bool = True) -> None:
+    def use(self, keep: bool = True) -> Generator[None, None, None]:
         run_mode = Env().viv_run_mode
         _path = self.path
         try:
@@ -1161,7 +1162,7 @@ def uses_viv(txt: str) -> bool:
 DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
 
 
-def read_dependency_block(txt: str) -> List[str]:
+def read_dependency_block(txt: str) -> Generator[str, None, None]:
     lines = iter(txt.splitlines())
     for line in lines:
         if re.match(DEPENDENCY_BLOCK_MARKER, line):
