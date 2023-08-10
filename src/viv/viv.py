@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-7-g560871e-dev"
+__version__ = "23.8a3-10-g505e79f-dev"
 
 
 class Spinner:
@@ -1478,7 +1478,7 @@ class Viv:
         elif path:
             sys.stdout.write(f"{vivenv.path.absolute()}\n")
         else:
-            vivenv.tree(size=size)
+            vivenv.tree()
 
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         log.info("updating local source copy of viv")
