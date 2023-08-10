@@ -38,18 +38,9 @@ cli_doc = """
 def yartsu(output: Path, args: Tuple[str, str] | str) -> None:
     if isinstance(args, str):
         args = (args,)
-    cmd = [
-        "viv",
-        *args,
-        "--help",
-        "|",
-        "yartsu",
-        "-w",
-        "70",
-        "-o",
-        str(output),
-    ]
-    run(" ".join(cmd), shell=True)
+    viv_cmd = " ".join(("viv", *args, "--help"))
+    cmd = f"{viv_cmd} | yartsu -w 70 -t '{viv_cmd}' -o {output}"
+    run(cmd, shell=True)
 
 
 if not SAVE_PATH.is_dir():

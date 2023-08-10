@@ -23,7 +23,7 @@ jobs:
 
       - name: Build Docs
         run: |
-          make svgs
+          FORCE_COLOR=1 make svgs
           make docs
 
       - name: Upload artifact

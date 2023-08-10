@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-11-g6b48e8c-dev"
+__version__ = "23.8a3-15-gfaca36d-dev"
 
 
 class Spinner:
@@ -188,7 +188,7 @@ class Ansi:
         self.option: str = self.yellow
         self.metavar: str = "\033[33m"  # normal yellow
 
-        if Env().no_color or not sys.stderr.isatty():
+        if not Env().force_color and (Env().no_color or not sys.stderr.isatty()):
             for attr in self.__dict__:
                 setattr(self, attr, "")
 
