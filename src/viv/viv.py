@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-15-gfaca36d-dev"
+__version__ = "23.8a3-16-gcbef848-dev"
 
 
 class Spinner:
@@ -1474,7 +1474,8 @@ class Viv:
 
         if not metadata_file.is_file():
             err_quit(f"Unable to find metadata for vivenv: {vivenv_id}")
-
+        if size:
+            vivenv.get_size()
         if use_json:
             sys.stdout.write(json.dumps(vivenv.meta.__dict__))
         elif path:
