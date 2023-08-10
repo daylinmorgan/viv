@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-10-g505e79f-dev"
+__version__ = "23.8a3-11-g6b48e8c-dev"
 
 
 class Spinner:
@@ -969,6 +969,8 @@ class ViVenv:
         run_mode = Env().viv_run_mode
         _path = self.path
         try:
+            if self.loaded:
+                yield
             if keep or run_mode == "persist":
                 yield
             elif run_mode == "ephemeral":
@@ -1734,18 +1736,18 @@ class Viv:
             _, bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
 
-            if not vivenv.loaded or Env().viv_force:
-                with vivenv.use(keep=keep):
+            with vivenv.use(keep=keep):
+                if not vivenv.loaded or Env().viv_force:
                     vivenv.create()
                     vivenv.install_pkgs()
-                    vivenv.bin_exists(bin)
+                vivenv.bin_exists(bin)
 
-                    # TODO: refactor this logic elsewhere
-                    if keep or Env().run_mode != "ephemeral":
-                        vivenv.touch()
-                        vivenv.meta.write(vivenv.path / "vivmeta.json")
+                # TODO: refactor this logic elsewhere
+                if keep or Env().run_mode != "ephemeral":
+                    vivenv.touch()
+                    vivenv.meta.write(vivenv.path / "vivmeta.json")
 
-                    subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
+                subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
 
 
 class Arg:
