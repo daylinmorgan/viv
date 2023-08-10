@@ -26,7 +26,10 @@ version = { source = "scm" }
 dev = [
     "pre-commit>=3",
     "mypy>=0.991",
+]
+docs = [
     "mkdocs-material>=9.1.15",
+    "yartsu"
 ]
 
 [tool.ruff]
