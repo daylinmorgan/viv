@@ -25,3 +25,6 @@ theme:
         icon: material/brightness-7
         name: Switch to dark mode
 
+markdown_extensions:
+  - footnotes
+
