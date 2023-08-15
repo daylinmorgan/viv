@@ -81,54 +81,45 @@ To remove `viv` all together you can use the included `purge` command:
 ```sh
 python3 <(curl -fsSL viv.dayl.in/viv.py) manage purge
 ```
-
-## Additional Features
-
-An experimental feature of `viv` is generating shim's that leverage the principles of `viv`.
-These shims would operate similar to `pipx` in which you can specify a command line app to "install".
-
-*Note* that `--standalone` will auto-generate a mini function version of `viv` to accomplish the same basic task as using a local copy of `viv`.
-After generating this standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
-See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
-
-```sh
-python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --freeze
-```
-
-## Alternatives
+## Equivalent commands from alternatives
 
 ### [pip-run](https://github.com/jaraco/pip-run)
 
+
 ```sh
-pip-run (10.0.5)
-├── autocommand (2.2.2)
-├── jaraco-context (4.3.0)
-├── jaraco-functools (3.6.0)
-│   └── more-itertools (9.1.0)
-├── jaraco-text (3.11.1)
-│   ├── autocommand (2.2.2)
-│   ├── inflect (6.0.2)
-│   │   └── pydantic>=1.9.1 (1.10.5)
-│   │       └── typing-extensions>=4.2.0 (4.5.0)
-│   ├── jaraco-context>=4.1 (4.3.0)
-│   ├── jaraco-functools (3.6.0)
-│   │   └── more-itertools (9.1.0)
-│   └── more-itertools (9.1.0)
-├── more-itertools>=8.3 (9.1.0)
-├── packaging (23.0)
-├── path>=15.1 (16.6.0)
-├── pip>=19.3 (23.0.1)
-└── platformdirs (3.1.0)
+pip-run cowsay -- -m cowsay "moove over, pip-run"
+python3 <(curl -fsSL viv.dayl.in/viv.py) run cowsay -- "moove over, pip-run"
+```
+
+```sh
+python -m pip-run requests -- -c "import requests; print(requests.get('https://pypi.org/project/pip-run').status_code)"
+python -m viv requests -b python -- -c "import requests; print(requests.get('https://pypi.org/project/viv').status_code)"
 ```
 
 ### [pipx](https://github.com/pypa/pipx/)
 
 ```sh
-pipx (1.1.0)
-├── argcomplete>=1.9.4 (2.1.1)
-├── packaging>=20.0 (23.0)
-└── userpath>=1.6.0 (1.8.0)
-    └── click (8.1.3)
+pipx install pycowsay
+viv shim pycowsay
 ```
+
+```sh
+pipx run https://gist.githubusercontent.com/cs01/fa721a17a326e551ede048c5088f9e0f/raw/6bdfbb6e9c1132b1c38fdd2f195d4a24c540c324/pipx-demo.py
+python3 <(curl -fsSL viv.dayl.in/viv.py) run \
+  -s https://gist.githubusercontent.com/cs01/fa721a17a326e551ede048c5088f9e0f/raw/6bdfbb6e9c1132b1c38fdd2f195d4a24c540c324/pipx-demo.py
+```
+
+## Bonus: use `viv` with just standalone snippet (37LOC)
+
+`--standalone` will auto-generate a mini function version of `viv` to accomplish the same basic task as using a local copy of `viv`.
+After generating this standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
+See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
+
+`viv freeze` also supports `--standalone`
+
+```sh
+python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --freeze
+```
+
 
 [^1]: You do need to have `pip` but surely you have `pip` already.
