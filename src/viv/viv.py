@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8a3-17-g7b5d4ad-dev"
+__version__ = "23.8a3-18-g837dbb3-dev"
 
 
 class Spinner:
@@ -1701,6 +1701,9 @@ class Viv:
                 env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
 
                 subprocess_run_quit([sys.executable, scriptpath, *rest], env=env)
+            elif not spec:
+                log.warning("using viv with empty spec, skipping vivenv creation")
+                subprocess_run_quit([sys.executable, scriptpath, *rest])
             else:
                 vivenv = ViVenv(spec + deps)
                 if not vivenv.loaded or Env().viv_force:
