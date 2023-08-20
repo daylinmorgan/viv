@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8b1"
+__version__ = "23.8b1-dev"
 
 
 class Spinner:
@@ -143,7 +143,7 @@ class Env:
 
     @property
     def _viv_spec(self) -> List[str]:
-        return [i for i in os.getenv("VIV_SPEC", "").split(" ") if i]
+        return [i[1:-1] for i in os.getenv("VIV_SPEC", "").split(" ") if i]
 
     @property
     def _viv_log_path(self) -> Path:
