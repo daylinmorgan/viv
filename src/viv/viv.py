@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8b1-dev"
+__version__ = "23.8b1-1-geefcabe-dev"
 
 
 class Spinner:
@@ -1681,10 +1681,11 @@ class Viv:
             if viv_used and deps:
                 error(
                     "Script Dependencies block and "
-                    "`viv` API can't be used in the same script"
+                    "`viv.use` API can't be used in the same script"
                 )
 
             if not self.local_source and viv_used:
+                log.debug("fetching remote copy to use for python api")
                 (tmppath / "viv.py").write_text(
                     fetch_script(
                         "https://raw.githubusercontent.com/daylinmorgan/viv/latest/src/viv/viv.py"
@@ -1699,9 +1700,8 @@ class Viv:
 
             if viv_used:
                 env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
-
                 subprocess_run_quit([sys.executable, scriptpath, *rest], env=env)
-            elif not spec:
+            elif not spec and not deps:
                 log.warning("using viv with empty spec, skipping vivenv creation")
                 subprocess_run_quit([sys.executable, scriptpath, *rest])
             else:
@@ -1712,7 +1712,6 @@ class Viv:
 
                 vivenv.touch()
                 vivenv.meta.write()
-
                 subprocess_run_quit([vivenv.python, scriptpath, *rest])
 
     def cmd_run(
