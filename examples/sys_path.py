@@ -2,20 +2,30 @@
 """
 Embed the viv.py on the sys.path at runtime rather than using PYTHONPATH
 """
+import sys
+
+old_sys_path = sys.path.copy()  # noqa
 
 
 __import__("sys").path.append(
     __import__("os").path.expanduser("~/.local/share/viv")
 )  # noqa # isort: off
-__import__("viv").use("pyfiglet", "setuptools")  # noqa # isort: off
-# pyfiglet requires pkg_resources which is part of setuptools
+__import__("viv").use("rich")  # noqa # isort: off
 
-import sys
+from difflib import unified_diff
 
-from pyfiglet import Figlet
+from rich import print
+from rich.syntax import Syntax
 
-f = Figlet(font="slant")
-print(f.renderText("Viv isn't venv!"))
-
-print("Sys path:")
-print("\n".join(sys.path))
+print("[bold italic yellow] Modified Sys.path")
+print(
+    Syntax(
+        "\n".join(
+            unified_diff(
+                old_sys_path, sys.path, "pre-viv sys.path", "post-viv sys.path"
+            )
+        ),
+        "diff",
+        theme="default",
+    )
+)
