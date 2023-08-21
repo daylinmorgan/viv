@@ -52,10 +52,8 @@ from typing import (
     Type,
     Union,
 )
-from urllib.error import HTTPError
-from urllib.request import urlopen
 
-__version__ = "23.8b1-4-g3bf000f-dev"
+__version__ = "23.8b1-6-g19c39ad-dev"
 
 
 class Spinner:
@@ -1120,6 +1118,9 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
 
 
 def fetch_script(url: str) -> str:
+    from urllib.error import HTTPError  # noqa
+    from urllib.request import urlopen  # noqa
+
     try:
         log.debug(f"fetching from remote url: {url}")
         r = urlopen(url)
