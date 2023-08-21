@@ -7,7 +7,7 @@
   </p>
   <div align="center">
     <img
-      src="https://raw.githubusercontent.com/daylinmorgan/viv/main/docs/svgs/viv-help.svg"
+      src="https://raw.githubusercontent.com/daylinmorgan/viv/main/assets/viv-help.svg"
       alt="cli screenshot"
       width="500"
       >

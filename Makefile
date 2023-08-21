@@ -18,6 +18,9 @@ bump: ## update version and tag commit
 venv: ## generate environment
 	pdm install
 
+assets/viv-help.svg:
+	FORCE_COLOR=1 viv --help | yartsu -t 'viv --help' -w 70 -o $@
+
 .PHONY: dev-install
 dev-install:
 	ln -sf $(PWD)/src/viv/viv.py ~/.local/share/viv/viv.py

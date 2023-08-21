@@ -173,3 +173,4 @@ poetry.toml
 # copy of README.md
 docs/index.md
 docs/viv.py
+docs/svgs
