@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -S
 """viv isn't venv!
 
   viv -h
@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-2-g2adcd6f-dev"
+__version__ = "23.8b2-5-g10e668b-dev"
 
 
 class Spinner:
