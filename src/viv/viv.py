@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-5-g10e668b-dev"
+__version__ = "23.8b2-6-gdafa099-dev"
 
 
 class Spinner:
@@ -994,7 +994,9 @@ class ViVenv:
         return len([f for f in self.meta.files if Path(f).is_file()]) == 0
 
     def get_size(self) -> None:
-        size = float(sum(p.stat().st_size for p in Path(self.path).rglob("*")))
+        size = float(
+            sum(p.stat().st_size for p in Path(self.path).rglob("*") if p.is_file())
+        )
         for unit in ("B", "K", "M", "G", "T"):
             if size < 1024:
                 break
