@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2"
+__version__ = "23.8b2-dev"
 
 
 class Spinner:
@@ -155,6 +155,7 @@ class Env:
                     (f"{a.bold}{a.yellow}{choice}{a.end}" for choice in choices)
                 )
             )
+        return run_mode
 
 
 class Cfg:
