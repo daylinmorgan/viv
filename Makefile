@@ -35,7 +35,8 @@ docs/viv.py: src/viv/viv.py
 	cp $< $@
 
 docs/index.md: README.md
-	cp $< $@
+	printf -- '---\nhide: [navigation]\n---\n\n' > $@
+	cat $< >> $@
 
 examples/black: .FORCE
 	rm -f $@

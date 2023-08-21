@@ -4,12 +4,18 @@ repo_url: https://github.com/daylinmorgan/viv
 edit_uri: edit/main/docs/
 repo_name: daylinmorgan/viv
 
+nav:
+  - home: index.md
+  - cli: cli.md
+
 theme:
   name: material
   logo: https://raw.githubusercontent.com/daylinmorgan/viv/main/assets/logo.svg
   favicon: https://raw.githubusercontent.com/daylinmorgan/viv/main/assets/logo.svg
   features:
+    - navigation.tabs
     - navigation.indexes
+
   palette:
     # Palette toggle for dark mode
     - scheme: slate
@@ -27,4 +33,3 @@ theme:
 
 markdown_extensions:
   - footnotes
-

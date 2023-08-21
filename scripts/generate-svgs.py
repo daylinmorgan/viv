@@ -28,7 +28,11 @@ CLI_DOC_PATH = DOCS_PATH / "cli.md"
 )
 
 
-cli_doc = """
+cli_doc = """\
+---
+hide: [navigation]
+---
+
 # cli
 
 ![help](./svgs/viv-help.svg)
