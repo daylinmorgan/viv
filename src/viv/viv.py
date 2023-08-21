@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b1-7-g3031e5f-dev"
+__version__ = "23.8b1-8-gc7bcdfe-dev"
 
 
 class Spinner:
@@ -1002,11 +1002,9 @@ class ViVenv:
                     self.set_path(Path(tmpdir))
                     yield
             elif run_mode == "semi-ephemeral":
-                (
-                    ephemeral_cache := (
-                        Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
-                    )
-                ).mkdir(exist_ok=True, parents=True)
+                ephemeral_cache = _path_ok(
+                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
+                )
                 self.set_path(ephemeral_cache / self.name)
                 yield
         finally:
@@ -1678,6 +1676,20 @@ class Viv:
 
             make_executable(output)
 
+    @staticmethod
+    def _update_cache(env: Dict[str, str], keep: bool, tmpdir: str):
+        run_mode = Env().viv_run_mode
+        if not keep:
+            if run_mode == "ephemeral":
+                new_cache = tmpdir
+            elif run_mode == "semi-ephemeral":
+                new_cache = str(
+                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
+                )
+
+            env.update({"VIV_CACHE": new_cache})
+            os.environ["VIV_CACHE"] = new_cache
+
     def _run_script(
         self, spec: List[str], script: str, keep: bool, rest: List[str]
     ) -> None:
@@ -1711,10 +1723,7 @@ class Viv:
                 )
 
             scriptpath.write_text(script_text)
-
-            if not keep:
-                env.update({"VIV_CACHE": tmpdir})
-                os.environ["VIV_CACHE"] = tmpdir
+            self._update_cache(env, keep, tmpdir)
 
             if viv_used:
                 log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
@@ -1727,18 +1736,19 @@ class Viv:
                 subprocess_run_quit([sys.executable, "-S", scriptpath, *rest])
             else:
                 vivenv = ViVenv(spec + deps)
-                vivenv.ensure()
-                vivenv.touch()
-                vivenv.meta.write()
-                subprocess_run_quit(
-                    [vivenv.python, "-S", scriptpath, *rest],
-                    env=dict(
-                        env,
-                        PYTHONPATH=":".join(
-                            filter(None, (vivenv.site_packages, Env().pythonpath))
+                with vivenv.use(keep=keep):
+                    vivenv.ensure()
+                    vivenv.touch()
+                    vivenv.meta.write()
+                    subprocess_run_quit(
+                        [vivenv.python, "-S", scriptpath, *rest],
+                        env=dict(
+                            env,
+                            PYTHONPATH=":".join(
+                                filter(None, (vivenv.site_packages, Env().pythonpath))
+                            ),
                         ),
-                    ),
-                )
+                    )
 
     def cmd_run(
         self,
