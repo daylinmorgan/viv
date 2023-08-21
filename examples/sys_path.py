@@ -22,7 +22,11 @@ print(
     Syntax(
         "\n".join(
             unified_diff(
-                old_sys_path, sys.path, "pre-viv sys.path", "post-viv sys.path"
+                old_sys_path,
+                sys.path,
+                "pre-viv sys.path",
+                "post-viv sys.path",
+                n=max(map(len, (old_sys_path, sys.path))),
             )
         ),
         "diff",
