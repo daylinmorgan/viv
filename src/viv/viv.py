@@ -56,7 +56,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8b1-1-geefcabe-dev"
+__version__ = "23.8b1-2-g182d99c-dev"
 
 
 class Spinner:
@@ -943,6 +943,11 @@ class ViVenv:
             verbose=bool(Env().viv_verbose),
         )
 
+    def ensure(self) -> None:
+        if not self.loaded or Env().viv_force:
+            self.create()
+            self.install_pkgs()
+
     def touch(self) -> None:
         self.meta.accessed = str(datetime.today())
 
@@ -1060,9 +1065,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
     """
 
     vivenv = ViVenv([*list(packages), *Env().viv_spec], track_exe=track_exe, name=name)
-    if not vivenv.loaded or Env().viv_force:
-        vivenv.create()
-        vivenv.install_pkgs()
+    vivenv.ensure()
     vivenv.meta.addfile(get_caller_path())
     vivenv.meta.write()
 
@@ -1373,16 +1376,8 @@ class Viv:
 
         spec = resolve_deps(reqs, requirements)
         if keep:
-            # re-create env again since path's are hard-coded
             vivenv = ViVenv(spec)
-
-            if not vivenv.loaded or Env().viv_force:
-                vivenv.create()
-                vivenv.install_pkgs()
-                vivenv.meta.write()
-            else:
-                log.info("re-using existing vivenv")
-
+            vivenv.ensure()
             vivenv.touch()
             vivenv.meta.write()
 
@@ -1706,10 +1701,7 @@ class Viv:
                 subprocess_run_quit([sys.executable, scriptpath, *rest])
             else:
                 vivenv = ViVenv(spec + deps)
-                if not vivenv.loaded or Env().viv_force:
-                    vivenv.create()
-                    vivenv.install_pkgs()
-
+                vivenv.ensure()
                 vivenv.touch()
                 vivenv.meta.write()
                 subprocess_run_quit([vivenv.python, scriptpath, *rest])
@@ -1741,9 +1733,7 @@ class Viv:
             vivenv = ViVenv(spec)
 
             with vivenv.use(keep=keep):
-                if not vivenv.loaded or Env().viv_force:
-                    vivenv.create()
-                    vivenv.install_pkgs()
+                vivenv.ensure()
                 vivenv.bin_exists(bin)
 
                 # TODO: refactor this logic elsewhere
