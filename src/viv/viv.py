@@ -32,7 +32,6 @@ from argparse import (
 )
 from argparse import ArgumentParser as StdArgParser
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -53,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b1-6-g19c39ad-dev"
+__version__ = "23.8b1-7-g3031e5f-dev"
 
 
 class Spinner:
@@ -800,15 +799,24 @@ def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
     return sha256.hexdigest()
 
 
-@dataclass
 class Meta:
-    name: str
-    id: str
-    spec: List[str]
-    files: List[str]
-    exe: str
-    created: str = ""
-    accessed: str = ""
+    def __init__(
+        self,
+        name: str,
+        id: str,
+        spec: List[str],
+        files: List[str],
+        exe: str,
+        created: str = "",
+        accessed: str = "",
+    ):
+        self.name = name
+        self.id = id
+        self.spec = spec
+        self.files = files
+        self.exe = exe
+        self.created = created
+        self.accessed = accessed
 
     @classmethod
     def load(cls, name: str) -> "Meta":
