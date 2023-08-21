@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-dev"
+__version__ = "23.8b2-1-g17785a6-dev"
 
 
 class Spinner:
@@ -961,6 +961,8 @@ class ViVenv:
         )
 
     def ensure(self) -> None:
+        # FIXME: doens't account for the ephemeral case...
+        # should this be encapuslated in the use method?
         if not self.loaded or Env().viv_force:
             self.create()
             self.install_pkgs()
@@ -1249,9 +1251,10 @@ class Cache:
     def __init__(self) -> None:
         self.vivenvs = self._get_venvs()
 
-    def _get_venvs(self) -> Dict[str, ViVenv]:
+    def _get_venvs(self, cache_dir: Path = Cfg().cache_venv) -> Dict[str, ViVenv]:
+        # TODO: should this be a set instead?
         vivenvs = {}
-        for p in Cfg().cache_venv.iterdir():
+        for p in cache_dir.iterdir():
             vivenv = ViVenv.load(p.name)
             vivenvs[vivenv.name] = vivenv
         return vivenvs
@@ -1790,13 +1793,13 @@ class Viv:
 
             with vivenv.use(keep=keep):
                 vivenv.ensure()
-                vivenv.bin_exists(bin)
 
                 # TODO: refactor this logic elsewhere
-                if keep or Env().run_mode != "ephemeral":
+                if keep or Env().viv_run_mode != "ephemeral":
                     vivenv.touch()
                     vivenv.meta.write(vivenv.path / "vivmeta.json")
 
+                vivenv.bin_exists(bin)
                 subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
 
 
