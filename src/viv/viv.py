@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-1-g17785a6-dev"
+__version__ = "23.8b2-2-g2adcd6f-dev"
 
 
 class Spinner:
@@ -1393,8 +1393,9 @@ class Viv:
         for name in vivenvs:
             vivenv = self._match_vivenv(name)
             if vivenv.path.is_dir():
-                log.info(f"removing {vivenv.name}")
-                shutil.rmtree(vivenv.path)
+                with Spinner(f"removing vivenv {a.bold}{vivenv.name}{a.end}"):
+                    shutil.rmtree(vivenv.path)
+                log.info(f"{a.bold}{vivenv.name}{a.end} succesfully removed")
             else:
                 err_quit(
                     f"cowardly exiting because I didn't find vivenv: {name}",
