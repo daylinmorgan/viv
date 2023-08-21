@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import hashlib
-import inspect
 import itertools
 import json
 import logging
@@ -56,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8b1-2-g182d99c-dev"
+__version__ = "23.8b1-3-g5db225a-dev"
 
 
 class Spinner:
@@ -951,11 +950,24 @@ class ViVenv:
     def touch(self) -> None:
         self.meta.accessed = str(datetime.today())
 
+    @property
+    def site_packages(self) -> str:
+        return str(*(self.path / "lib").glob("python*/site-packages"))
+
     def activate(self) -> None:
         # also add sys.path here so that it comes first
         log.debug(f"activating {self.name}")
-        path_to_add = str(*(self.path / "lib").glob("python*/site-packages"))
-        sys.path = [p for p in (path_to_add, *sys.path) if p != site.USER_SITE]
+        path_to_add = self.site_packages
+
+        # approximate behavior of python -S
+        sys.path = [
+            path_to_add,
+            *(
+                p
+                for p in sys.path
+                if not any(map(p.endswith, ("dist-packages", "site-packages")))
+            ),
+        ]
         site.addsitedir(path_to_add)
 
     def files_exist(self) -> bool:
@@ -1048,6 +1060,8 @@ class ViVenv:
 def get_caller_path() -> Path:
     """get callers callers file path"""
     # viv.py is fist in stack since function is used in `viv.use()`
+    import inspect  # noqa
+
     frame_info = inspect.stack()[2]
     filepath = frame_info.filename  # in python 3.5+, you can use frame_info.filename
     del frame_info  # drop the reference to the stack frame to avoid reference cycles
@@ -1695,16 +1709,23 @@ class Viv:
 
             if viv_used:
                 env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
-                subprocess_run_quit([sys.executable, scriptpath, *rest], env=env)
+                subprocess_run_quit([sys.executable, "-S", scriptpath, *rest], env=env)
             elif not spec and not deps:
                 log.warning("using viv with empty spec, skipping vivenv creation")
-                subprocess_run_quit([sys.executable, scriptpath, *rest])
+                subprocess_run_quit([sys.executable, "-S", scriptpath, *rest])
             else:
                 vivenv = ViVenv(spec + deps)
                 vivenv.ensure()
                 vivenv.touch()
                 vivenv.meta.write()
-                subprocess_run_quit([vivenv.python, scriptpath, *rest])
+                subprocess_run_quit(
+                    [vivenv.python, "-S", scriptpath, *rest],
+                    env={
+                        "PYTHONPATH": ":".join(
+                            filter(None, (vivenv.site_packages, Env().pythonpath))
+                        )
+                    },
+                )
 
     def cmd_run(
         self,
