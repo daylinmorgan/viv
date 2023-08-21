@@ -55,7 +55,7 @@ from typing import (
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-__version__ = "23.8b1-3-g5db225a-dev"
+__version__ = "23.8b1-4-g3bf000f-dev"
 
 
 class Spinner:
@@ -1708,8 +1708,11 @@ class Viv:
                 os.environ["VIV_CACHE"] = tmpdir
 
             if viv_used:
-                env.update({"VIV_SPEC": " ".join(f"'{req}'" for req in spec)})
-                subprocess_run_quit([sys.executable, "-S", scriptpath, *rest], env=env)
+                log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
+                subprocess_run_quit(
+                    [sys.executable, "-S", scriptpath, *rest],
+                    env=dict(env, VIV_SPEC=" ".join(f"'{req}'" for req in spec)),
+                )
             elif not spec and not deps:
                 log.warning("using viv with empty spec, skipping vivenv creation")
                 subprocess_run_quit([sys.executable, "-S", scriptpath, *rest])
@@ -1720,11 +1723,12 @@ class Viv:
                 vivenv.meta.write()
                 subprocess_run_quit(
                     [vivenv.python, "-S", scriptpath, *rest],
-                    env={
-                        "PYTHONPATH": ":".join(
+                    env=dict(
+                        env,
+                        PYTHONPATH=":".join(
                             filter(None, (vivenv.site_packages, Env().pythonpath))
-                        )
-                    },
+                        ),
+                    ),
                 )
 
     def cmd_run(
