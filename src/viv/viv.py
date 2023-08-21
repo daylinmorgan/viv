@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b1-8-gc7bcdfe-dev"
+__version__ = "23.8b1-9-gf88a7bd-dev"
 
 
 class Spinner:
@@ -119,7 +119,6 @@ def _path_ok(p: Path) -> Path:
 class Env:
     defaults = dict(
         viv_bin_dir=Path.home() / ".local" / "bin",
-        viv_run_mode="ephemeral",
         xdg_cache_home=Path.home() / ".cache",
         xdg_data_home=Path.home() / ".local" / "share",
     )
@@ -144,6 +143,18 @@ class Env:
     @property
     def _viv_log_path(self) -> Path:
         return _path_ok(Path(self.xdg_data_home) / "viv") / "viv.log"
+
+    @property
+    def _viv_run_mode(self) -> str:
+        choices = {"ephemeral", "semi-ephemeral", "persist"}
+        run_mode = os.getenv("VIV_RUN_MODE", "ephemeral")
+        if run_mode not in choices:
+            err_quit(
+                f"unsupported VIV_RUN_MODE: {run_mode} \noptions: "
+                + ", ".join(
+                    (f"{a.bold}{a.yellow}{choice}{a.end}" for choice in choices)
+                )
+            )
 
 
 class Cfg:
