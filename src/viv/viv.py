@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-6-gdafa099-dev"
+__version__ = "23.8b2-9-g044a229-dev"
 
 
 class Spinner:
@@ -357,7 +357,7 @@ class Template:
     (cache := (base) / "viv/venvs").mkdir(parents=True, exist_ok=True)
     exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
     _id = hashlib.sha256((str(spec := [*pkgs]) + exe).encode()).hexdigest()
-    if (env := cache / (name if name else _id)) not in cache.glob("*/") or F:
+    if (env := cache / (name if name else _id[:8])) not in cache.glob("*/") or F:
         sys.stderr.write(f"generating new vivenv -> {env.name}\n")
         venv.create(env, prompt=f"viv-{name}", symlinks=True, clear=True)
         kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if V else (-1, 2))))
@@ -1124,13 +1124,19 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
         "--dry-run",
         "--quiet",
         "--ignore-installed",
+        "--disable-pip-version-check",
         "--report",
         "-",
     ] + spec
+    try:
+        result = subprocess_run(cmd, check_output=True, spinmsg="resolving depedencies")
+        report = json.loads(result)
+    except json.JSONDecodeError:
+        err_quit(
+            f"failed to parse result from cmd: {a.bold}{' '.join(cmd)}{a.end}\n"
+            "see viv log for output"
+        )
 
-    report = json.loads(
-        subprocess_run(cmd, check_output=True, spinmsg="resolving depedencies")
-    )
     resolved_spec = [
         f"{pkg['metadata']['name']}=={pkg['metadata']['version']}"
         for pkg in report["install"]
