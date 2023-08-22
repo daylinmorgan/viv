@@ -1,12 +1,6 @@
 VERSION ?= $(shell git describe --tags --always --dirty=-dev | sed 's/^v//g')
 PREFIX ?= ~/bin
 
-lint: ## run pre-commit hooks
-	pdm run pre-commit run --all || pdm run pre-commit run --all
-
-types: ## run mypy
-	pdm run mypy src/viv
-
 bump: ## update version and tag commit
 	@echo "bumping to version => $(VERSION)"
 	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
@@ -25,18 +19,15 @@ assets/viv-help.svg:
 dev-install:
 	ln -sf $(PWD)/src/viv/viv.py ~/.local/share/viv/viv.py
 
-docs: docs/index.md docs/viv.py ## build docs
-	pdm run mkdocs build
-
-svgs: ## build svgs for docs
-	pdm run python ./scripts/generate-svgs.py
+## docs |> update docs files
+docs: docs/viv.py docs/index.md
 
 docs/viv.py: src/viv/viv.py
-	cp $< $@
+	@cp $< $@
 
 docs/index.md: README.md
-	printf -- '---\nhide: [navigation]\n---\n\n' > $@
-	cat $< >> $@
+	@printf -- '---\nhide: [navigation]\n---\n\n' > $@
+	@cat $< >> $@
 
 examples/black: .FORCE
 	rm -f $@
