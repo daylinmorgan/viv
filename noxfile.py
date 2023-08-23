@@ -5,7 +5,7 @@ from pathlib import Path
 
 import nox
 
-nox.options.sessions = ["lint"]
+nox.options.sessions = ["lint", "types"]
 nox.options.reuse_existing_virtualenvs = True
 os.environ.update({"PDM_IGNORE_SAVED_PYTHON": "1"})
 
@@ -18,6 +18,11 @@ def pdm_install(session, group):
 def lint(session):
     pdm_install(session, "dev")
     session.run("pre-commit", "run")
+
+
+@nox.session
+def typecheck(session):
+    pdm_install(session, "dev")
     session.run("mypy", "src/")
 
 
