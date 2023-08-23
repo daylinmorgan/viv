@@ -29,7 +29,9 @@ def typecheck(session):
 @nox.session
 def svgs(session):
     pdm_install(session, "docs")
-    session.run("./scripts/generate-svgs.py", external=True)
+    session.run(
+        "./scripts/generate-svgs.py", external=True, env={"FORCE_COLOR": "true"}
+    )
 
 
 @nox.session
