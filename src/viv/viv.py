@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-10-g0cc9faa-dev"
+__version__ = "23.8b2-11-gf522352-dev"
 
 
 class Spinner:
@@ -939,6 +939,10 @@ class ViVenv:
 
         return vivenv
 
+    def exists(self):
+        if self.name in (d.name for d in Cfg().cache_venv.iterdir()):
+            self.loaded = True
+
     def set_path(self, path: Path | None = None) -> None:
         self.path = path if path else Cfg().cache_venv / self.name
         self.python = str((self.path / "bin" / "python").absolute())
@@ -1002,8 +1006,7 @@ class ViVenv:
         )
 
     def ensure(self) -> None:
-        # FIXME: doens't account for the ephemeral case...
-        # should this be encapuslated in the use method?
+        self.existse()
         if not self.loaded or Env().viv_force:
             self.create()
             self.install_pkgs()
@@ -1051,18 +1054,23 @@ class ViVenv:
         _path = self.path
         try:
             if self.loaded:
+                self.ensure()
                 yield
-            if keep or run_mode == "persist":
+            elif keep or run_mode == "persist":
+                self.ensure()
                 yield
             elif run_mode == "ephemeral":
                 with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                     self.set_path(Path(tmpdir))
+                    self.ensure()
                     yield
             elif run_mode == "semi-ephemeral":
                 ephemeral_cache = _path_ok(
-                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
+                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache"
                 )
-                self.set_path(ephemeral_cache / self.name)
+                os.environ.update(dict(VIV_CACHE=str(ephemeral_cache)))
+                self.set_path(ephemeral_cache / "venvs" / self.name)
+                self.ensure()
                 yield
         finally:
             self.set_path(_path)
@@ -1140,11 +1148,10 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
     """
 
     vivenv = ViVenv([*list(packages), *Env().viv_spec], track_exe=track_exe, name=name)
-    vivenv.ensure()
-    vivenv.meta.addfile(get_caller_path())
-    vivenv.meta.write()
-
-    vivenv.activate()
+    with vivenv.use():
+        vivenv.meta.addfile(get_caller_path())
+        vivenv.meta.write()
+        vivenv.activate()
 
     return vivenv.path
 
@@ -1463,9 +1470,9 @@ class Viv:
         spec = resolve_deps(reqs, requirements)
         if keep:
             vivenv = ViVenv(spec)
-            vivenv.ensure()
-            vivenv.touch()
-            vivenv.meta.write()
+            with vivenv.use():
+                vivenv.touch()
+                vivenv.meta.write()
 
         log.info("see below for import statements\n")
 
@@ -1842,8 +1849,6 @@ class Viv:
             vivenv = ViVenv(spec)
 
             with vivenv.use(keep=keep):
-                vivenv.ensure()
-
                 # TODO: refactor this logic elsewhere
                 if keep or Env().viv_run_mode != "ephemeral":
                     vivenv.touch()

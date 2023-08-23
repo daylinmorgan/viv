@@ -5,35 +5,39 @@ from pathlib import Path
 
 import nox
 
+nox.options.sessions = ["lint"]
 nox.options.reuse_existing_virtualenvs = True
 os.environ.update({"PDM_IGNORE_SAVED_PYTHON": "1"})
 
-def pdm_install(session,group):
+
+def pdm_install(session, group):
     session.run_always("pdm", "install", "-G", group, external=True, silent=True)
 
 
 @nox.session
 def lint(session):
-    pdm_install(session,"dev")
+    pdm_install(session, "dev")
     session.run("pre-commit", "run")
     session.run("mypy", "src/")
+
 
 @nox.session
 def svgs(session):
     pdm_install(session, "docs")
     session.run("./scripts/generate-svgs.py", external=True)
 
+
 @nox.session
 def docs(session):
-    pdm_install(session,"docs")
-    if not Path('docs/svgs').is_dir():
+    pdm_install(session, "docs")
+    if not Path("docs/svgs").is_dir():
         svgs(session)
 
-    session.run("make","docs", external=True)
+    session.run("make", "docs", external=True)
     if session.interactive:
-        session.run("mkdocs","serve")
+        session.run("mkdocs", "serve")
     else:
-        session.run("mkdocs","build")
+        session.run("mkdocs", "build")
 
 
 # @nox.session(
