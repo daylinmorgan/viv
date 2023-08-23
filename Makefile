@@ -1,13 +1,4 @@
 VERSION ?= $(shell git describe --tags --always --dirty=-dev | sed 's/^v//g')
-PREFIX ?= ~/bin
-
-bump: ## update version and tag commit
-	@echo "bumping to version => $(VERSION)"
-	@sed -i 's/__version__ = ".*"/__version__ = "$(VERSION)"/g' src/viv/viv.py
-	@git add src/viv/viv.py && git commit -m "chore: bump version" --no-verify
-	@git tag v$(VERSION)
-	@git tag -d latest || true
-	@git tag latest
 
 venv: ## generate environment
 	pdm install
