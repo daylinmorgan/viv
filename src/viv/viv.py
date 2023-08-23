@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-11-gf522352-dev"
+__version__ = "23.8b2-13-g1f0eed9-dev"
 
 
 class Spinner:
@@ -1006,7 +1006,7 @@ class ViVenv:
         )
 
     def ensure(self) -> None:
-        self.existse()
+        self.exists()
         if not self.loaded or Env().viv_force:
             self.create()
             self.install_pkgs()
@@ -1029,7 +1029,7 @@ class ViVenv:
             *(
                 p
                 for p in sys.path
-                if not any(map(p.endswith, ("dist-packages", "site-packages")))
+                if not p.endswith(("dist-packages", "site-packages"))
             ),
         ]
         site.addsitedir(path_to_add)
@@ -1048,21 +1048,24 @@ class ViVenv:
 
         self.size = f"{size:.1f}{unit}B"
 
+    # TODO: reconsider this function which is starting to do heavy lifting
     @contextmanager
     def use(self, keep: bool = True) -> Generator[None, None, None]:
         run_mode = Env().viv_run_mode
         _path = self.path
+
+        def common():
+            self.ensure()
+            self.touch()
+
         try:
-            if self.loaded:
-                self.ensure()
-                yield
-            elif keep or run_mode == "persist":
-                self.ensure()
+            if self.loaded or keep or run_mode == "persist":
+                common()
                 yield
             elif run_mode == "ephemeral":
                 with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
                     self.set_path(Path(tmpdir))
-                    self.ensure()
+                    common()
                     yield
             elif run_mode == "semi-ephemeral":
                 ephemeral_cache = _path_ok(
@@ -1070,7 +1073,7 @@ class ViVenv:
                 )
                 os.environ.update(dict(VIV_CACHE=str(ephemeral_cache)))
                 self.set_path(ephemeral_cache / "venvs" / self.name)
-                self.ensure()
+                common()
                 yield
         finally:
             self.set_path(_path)
