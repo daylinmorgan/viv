@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-13-g1f0eed9-dev"
+__version__ = "23.8b2-13-g0136568-dev"
 
 
 class Spinner:
@@ -1813,7 +1813,6 @@ class Viv:
                 vivenv = ViVenv(spec + deps)
                 with vivenv.use(keep=keep):
                     vivenv.ensure()
-                    vivenv.touch()
                     vivenv.meta.write()
                     subprocess_run_quit(
                         [vivenv.python, "-S", scriptpath, *rest],
@@ -1852,9 +1851,7 @@ class Viv:
             vivenv = ViVenv(spec)
 
             with vivenv.use(keep=keep):
-                # TODO: refactor this logic elsewhere
                 if keep or Env().viv_run_mode != "ephemeral":
-                    vivenv.touch()
                     vivenv.meta.write(vivenv.path / "vivmeta.json")
 
                 vivenv.bin_exists(bin)
