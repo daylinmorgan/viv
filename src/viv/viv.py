@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-14-g44c8bea-dev"
+__version__ = "23.8b2-15-ga4b81d1-dev"
 
 
 class Spinner:
@@ -936,7 +936,7 @@ class ViVenv:
 
         return vivenv
 
-    def exists(self):
+    def exists(self) -> None:
         if self.name in (d.name for d in Cfg().cache_venv.iterdir()):
             self.loaded = True
 
@@ -1051,7 +1051,7 @@ class ViVenv:
         run_mode = Env().viv_run_mode
         _path = self.path
 
-        def common():
+        def common() -> None:
             self.ensure()
             self.touch()
 
@@ -1748,7 +1748,7 @@ class Viv:
             make_executable(output)
 
     @staticmethod
-    def _update_cache(env: Dict[str, str], keep: bool, tmpdir: str):
+    def _update_cache(env: os._Environ[str], keep: bool, tmpdir: str) -> None:
         run_mode = Env().viv_run_mode
         if not keep:
             if run_mode == "ephemeral":
