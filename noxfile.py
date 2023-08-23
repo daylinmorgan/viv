@@ -37,6 +37,8 @@ def svgs(session):
 @nox.session
 def docs(session):
     pdm_install(session, "docs")
+    Path("docs").mkdir(exist_ok=True)
+
     if not Path("docs/svgs").is_dir():
         svgs(session)
 

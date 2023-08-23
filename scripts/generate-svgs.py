@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import Tuple
 
 DOCS_PATH = Path(__file__).parent.parent / "docs"
-(SAVE_PATH := DOCS_PATH / "svgs").mkdir(exist_ok=True)
+(SAVE_PATH := DOCS_PATH / "svgs").mkdir(exist_ok=True, parents=True)
 VIV = Path(__file__).parent.parent / "src" / "viv" / "viv.py"
 CLI_DOC_PATH = DOCS_PATH / "cli.md"
 
