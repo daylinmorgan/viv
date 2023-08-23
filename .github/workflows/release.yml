@@ -25,7 +25,8 @@ jobs:
         uses: richardsimko/update-tag@v1
         with:
           tag_name: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate New Release
-        run: |
-          gh release create ${{ github.ref }}
+        run: gh release create ${{ github.ref }}
