@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-13-g0136568-dev"
+__version__ = "23.8b2-14-g44c8bea-dev"
 
 
 class Spinner:
@@ -842,14 +842,11 @@ def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
         sha256 representation of dependencies for vivenv
     """
 
-    sha256 = hashlib.sha256()
-    sha256.update(
+    return hashlib.sha256(
         (
             str(spec) + (str(Path(sys.executable).resolve()) if track_exe else "N/A")
         ).encode()
-    )
-
-    return sha256.hexdigest()
+    ).hexdigest()
 
 
 class Meta:
@@ -1220,8 +1217,7 @@ def fetch_source(reference: str) -> str:
         + "/src/viv/viv.py"
     )
 
-    (hash := hashlib.sha256()).update(src.encode())
-    sha256 = hash.hexdigest()
+    sha256 = hashlib.sha256(src.encode()).hexdigest()
 
     cached_src_file = Cfg().cache_src / f"{sha256}.py"
 
