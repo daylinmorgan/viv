@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-17-g495ac80-dev"
+__version__ = "23.8b2-18-g696a512-dev"
 
 
 class Spinner:
@@ -1727,6 +1727,7 @@ class Viv:
           viv shim black
           viv shim yartsu -o ~/bin/yartsu --standalone
         """
+
         default_bin, bin = self._pick_bin(reqs, bin)
         output = Env().viv_bin_dir / default_bin if not output else output.absolute()
 
@@ -2057,7 +2058,7 @@ class Cli:
                 self.parsers[grp].add_argument(*arg.args, **arg.kwargs)
 
     def _validate_args(self, args: Namespace) -> None:
-        name = args.func.__name__
+        name = args.func.__name__.replace("cmd_", "")
         if name in ("freeze", "shim"):
             if not args.reqs:
                 error("must specify a requirement")
@@ -2097,7 +2098,7 @@ class Cli:
                     + " shouldn't be used with a git-based installation",
                 )
 
-        if name == "run":
+        if name in ("run", "shim"):
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script")
 
