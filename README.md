@@ -44,9 +44,6 @@ while still unleashing the full power of python scripting with it's entire ecosy
 
 For that reason any usage of the `cli` can be accomplished using a remote copy as seen in the below install command.
 
-Currently, the project is in alpha and in particular the `cli` is under active development and is subject to change.
-The basic feature set surrounding virtual environment/dependency management should remain stable however.
-
 ## Setup
 
 Run the below command to install `viv`.
