@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   build-n-publish:
+    permissions:
+      id-token: write
     uses: ./.github/workflows/pypi.yml
 
   create-release:
