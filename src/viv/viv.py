@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "23.8b2-15-ga4b81d1-dev"
+__version__ = "23.8b2-17-g495ac80-dev"
 
 
 class Spinner:
@@ -1808,7 +1808,6 @@ class Viv:
             else:
                 vivenv = ViVenv(spec + deps)
                 with vivenv.use(keep=keep):
-                    vivenv.ensure()
                     vivenv.meta.write()
                     subprocess_run_quit(
                         [vivenv.python, "-S", scriptpath, *rest],
