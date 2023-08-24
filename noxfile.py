@@ -5,7 +5,7 @@ from pathlib import Path
 
 import nox
 
-nox.options.sessions = ["lint", "types"]
+nox.options.sessions = ["lint", "typecheck"]
 nox.options.reuse_existing_virtualenvs = True
 os.environ.update({"PDM_IGNORE_SAVED_PYTHON": "1"})
 
