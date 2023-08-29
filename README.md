@@ -6,7 +6,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com)
-<!--[![Conda][conda-shield]][conda-url]-->
+[![Conda][conda-shield]][conda-url]
 
 <div align="center">
   <a href="https://github.com/daylinmorgan/viv">
@@ -131,8 +131,8 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --fr
 
 [^1]: You do need to have `pip` but surely you have `pip` already.
 
-<!-- [conda-shield]: https://img.shields.io/conda/vn/conda-forge/viv-->
-<!-- [conda-url]: https://anaconda.org/conda-forge/viv -->
+[conda-shield]: https://img.shields.io/conda/vn/conda-forge/viv
+[conda-url]: https://anaconda.org/conda-forge/viv
 [pypi-shield]: https://img.shields.io/pypi/v/viv
 [pypi-url]: https://pypi.org/project/viv
 [stars-shield]: https://img.shields.io/github/stars/daylinmorgan/viv.svg
