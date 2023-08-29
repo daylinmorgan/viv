@@ -1252,7 +1252,7 @@ def _parse_date(txt: str) -> datetime:
         pass
 
     try:
-        datetime.strptime(txt, "%Y-%m-%dT%H:%M")
+        date = datetime.strptime(txt, "%Y-%m-%dT%H:%M")
         return date
     except ValueError:
         pass
