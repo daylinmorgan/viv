@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2023.1001"
+__version__ = "2023.1001-dev"
 
 
 class Spinner:
@@ -379,45 +379,6 @@ class Template:
     site.addsitedir(sitepkgs := str(*(env / "lib").glob("py*/si*")))
     sys.path = [sitepkgs, *filter(nopkgs, sys.path)]
 
-    return env
-
-
-    import hashlib, json, os, site, shutil, sys, venv  # noqa
-    from pathlib import Path  # noqa
-    from datetime import datetime  # noqa
-    from subprocess import run  # noqa
-
-    if not {*map(type, pkgs)} == {str}:
-        raise ValueError(f"spec: {pkgs} is invalid")
-
-    meta = dict.fromkeys(("created", "accessed"), (t := str(datetime.today())))
-    runner = str(Path(__file__).absolute().resolve())
-    envvar = lambda x: os.getenv(f"VIV_{x}")  # noqa
-    F, V, no_st = map(envvar, ("FORCE", "VERBOSE", "NO_SETUPTOOLS"))
-    base = Path(xdg) if (xdg := os.getenv("XDG_CACHE_HOME")) else Path.home() / ".cache"
-    (cache := (base) / "viv/venvs").mkdir(parents=True, exist_ok=True)
-    exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
-    _id = hashlib.sha256((str(spec := [*pkgs]) + exe).encode()).hexdigest()
-    if (env := cache / (name if name else _id[:8])) not in cache.glob("*/") or F:
-        sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.create(env, prompt=f"viv-{name}", symlinks=True, clear=True)
-        kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if V else (-1, 2))))
-        cmd = ["pip", "--python", str(env / "bin" / "python"), "install", *spec]
-        if (not no_st) and (not [x for x in spec if x.startswith("setuptools")]):
-            cmd.append("setuptools")
-        p = run(cmd, **kw)
-        if (rc := p.returncode) != 0:
-            if env.is_dir():
-                shutil.rmtree(env)
-            sys.stderr.write(f"pip had non zero exit ({rc})\n{p.stdout.decode()}\n")
-            sys.exit(rc)
-        meta.update(dict(id=_id, spec=spec, exe=exe, name=name, files=[runner]))
-    else:
-        meta = json.loads((env / "vivmeta.json").read_text())
-        meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
-    (env / "vivmeta.json").write_text(json.dumps(meta))
-    site.addsitedir(sitepkgs := str(*(env / "lib").glob("py*/si*")))
-    sys.path = [p for p in (sitepkgs, *sys.path) if p != site.USER_SITE]
     return env
 """
 
