@@ -242,6 +242,10 @@ class Ansi:
             )
         )
 
+    def key_value(self, items: Dict[str, Any], indent: str = "  ") -> None:
+        for k, v in items.items():
+            sys.stderr.write(f"{indent}{a.bold}{k}{a.end}: {v}\n")
+
     def subprocess(self, command: List[str], output: str) -> None:
         """generate output for subprocess error
 
@@ -503,24 +507,6 @@ if __name__ == "__main__":
   Symlink {a.bold}{src}{a.end} to {a.bold}{cli}{a.end}
 
 """
-
-    @staticmethod
-    def show(
-        cli: Optional[Path | str], running: Path, local: Optional[Path | str]
-    ) -> str:
-        return (
-            "\n".join(
-                f"  {a.bold}{k}{a.end}: {v}"
-                for k, v in (
-                    ("Version", __version__),
-                    ("CLI", cli),
-                    ("Running Source", running),
-                    ("Local Source", local),
-                    ("Cache", Cfg().cache_base),
-                )
-            )
-            + "\n"
-        )
 
 
 # TODO: convert the below functions into a proper file/stream logging interface
@@ -1563,6 +1549,7 @@ class Viv:
     def cmd_manage_show(
         self,
         pythonpath: bool = False,
+        system: bool = False,
     ) -> None:
         """manage viv itself"""
         if pythonpath:
@@ -1571,14 +1558,30 @@ class Viv:
             else:
                 err_quit("expected to find a local installation")
         else:
-            echo("Current:")
-            sys.stderr.write(
-                self.t.show(
-                    cli=shutil.which("viv"),
-                    running=self.running_source,
-                    local=self.local_source,
-                )
+            echo(f"{a.yellow}Current{a.end}:")
+            a.key_value(
+                {
+                    "Version": __version__,
+                    "CLI": shutil.which("viv"),
+                    "Running Source": self.running_source,
+                    "Local Source": self.local_source,
+                    "Cache": Cfg().cache_base,
+                }
             )
+
+            if system:
+                import platform  # noqa
+
+                echo(f"{a.yellow}System{a.end}:")
+                a.key_value(
+                    {
+                        "Python Exe": sys.executable,
+                        "Python Version": platform.sys.version,
+                        "Pip": subprocess_run(
+                            ["pip", "--version"], check_output=True
+                        ).strip(),
+                    }
+                )
 
     def cmd_manage_update(
         self,
@@ -1941,7 +1944,8 @@ class Cli:
             BoolArg(
                 flag="pythonpath",
                 help="show the path/to/install",
-            )
+            ),
+            BoolArg(flag="system", help="show system/python info too"),
         ],
         ("exe",): [
             Arg(
