@@ -1253,8 +1253,8 @@ class Cache:
     def __init__(self) -> None:
         self.vivenvs = self._get_venvs()
 
-    def _get_venvs(self, cache_dir: Path = Cfg().cache_venv) -> List[ViVenv]:
-        return [ViVenv.load(p.name) for p in cache_dir.iterdir()]
+    def _get_venvs(self, cache_dir: Path = Cfg().cache_venv) -> Set[ViVenv]:
+        return {ViVenv.load(p.name) for p in cache_dir.iterdir()}
 
     @staticmethod
     def _compare_dates(
@@ -1294,7 +1294,7 @@ class Cache:
             vivenv for vivenv in self.vivenvs if spec in ", ".join(vivenv.meta.spec)
         }
 
-    def filter(self, filters: Dict[str, str]) -> Dict[str, ViVenv]:
+    def filter(self, filters: Dict[str, str]) -> Set[ViVenv]:
         vivenv_sets = []
 
         for k, v in filters.items():
@@ -1310,7 +1310,7 @@ class Cache:
         if vivenv_sets:
             return {vivenv for vivenv in set.union(*vivenv_sets)}
         else:
-            return {}
+            return set()
 
 
 class Viv:
@@ -1464,7 +1464,7 @@ class Viv:
                 vivenv.tree()
         elif use_json:
             sys.stdout.write(
-                json.dumps({vivenv.name: vivenv.meta.__dict__ for vivenv in vivenvs()})
+                json.dumps({vivenv.name: vivenv.meta.__dict__ for vivenv in vivenvs})
             )
         else:
             for vivenv in vivenvs:
@@ -1559,13 +1559,11 @@ class Viv:
             )
 
             if system:
-                import platform  # noqa
-
                 echo(f"{a.yellow}System{a.end}:")
                 a.key_value(
                     {
                         "Python Exe": sys.executable,
-                        "Python Version": platform.sys.version,
+                        "Python Version": sys.version,
                         "Pip": subprocess_run(
                             ["pip", "--version"], check_output=True
                         ).strip(),
