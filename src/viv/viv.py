@@ -1253,13 +1253,8 @@ class Cache:
     def __init__(self) -> None:
         self.vivenvs = self._get_venvs()
 
-    def _get_venvs(self, cache_dir: Path = Cfg().cache_venv) -> Dict[str, ViVenv]:
-        # TODO: should this be a set instead?
-        vivenvs = {}
-        for p in cache_dir.iterdir():
-            vivenv = ViVenv.load(p.name)
-            vivenvs[vivenv.name] = vivenv
-        return vivenvs
+    def _get_venvs(self, cache_dir: Path = Cfg().cache_venv) -> List[ViVenv]:
+        return [ViVenv.load(p.name) for p in cache_dir.iterdir()]
 
     @staticmethod
     def _compare_dates(
@@ -1276,7 +1271,7 @@ class Cache:
     def _filter_date(self, date_name: str, when: str, date: datetime) -> Set[ViVenv]:
         return {
             vivenv
-            for _, vivenv in self.vivenvs.items()
+            for vivenv in self.vivenvs
             if self._compare_dates(
                 vivenv,
                 date_name,
@@ -1287,24 +1282,16 @@ class Cache:
 
     def _filter_file(self, file: str) -> Set[ViVenv]:
         if file == "None":
-            return {
-                vivenv for _, vivenv in self.vivenvs.items() if vivenv.files_exist()
-            }
+            return {vivenv for vivenv in self.vivenvs if vivenv.files_exist()}
         else:
             p = Path(file).absolute().resolve()
             if not p.is_file():
                 err_quit(f"Unable to find local file: {file}")
-            return {
-                vivenv
-                for _, vivenv in self.vivenvs.items()
-                if str(p) in vivenv.meta.files
-            }
+            return {vivenv for vivenv in self.vivenvs if str(p) in vivenv.meta.files}
 
     def _filter_spec(self, spec: str) -> Set[ViVenv]:
         return {
-            vivenv
-            for _, vivenv in self.vivenvs.items()
-            if spec in ", ".join(vivenv.meta.spec)
+            vivenv for vivenv in self.vivenvs if spec in ", ".join(vivenv.meta.spec)
         }
 
     def filter(self, filters: Dict[str, str]) -> Dict[str, ViVenv]:
@@ -1319,8 +1306,9 @@ class Cache:
 
             elif k == "spec":
                 vivenv_sets.append(self._filter_spec(v))
+
         if vivenv_sets:
-            return {vivenv.name: vivenv for vivenv in set.union(*vivenv_sets)}
+            return {vivenv for vivenv in set.union(*vivenv_sets)}
         else:
             return {}
 
@@ -1329,8 +1317,6 @@ class Viv:
     def __init__(self) -> None:
         self.t = Template()
         self._cache = Cache()
-        # compat layer
-        self.vivenvs = self._cache.vivenvs
         self._get_sources()
         self.name = "viv" if self.local else "python3 <(curl -fsSL viv.dayl.in/viv.py)"
 
@@ -1359,17 +1345,19 @@ class Viv:
 
     def _match_vivenv(self, name_id: str) -> ViVenv:  # type: ignore[return]
         matches: List[ViVenv] = []
-        for k, v in self.vivenvs.items():
-            if name_id == v.meta.id:
-                matches.append(v)
-            elif name_id == k or v.name == name_id:
-                matches.append(v)
-            elif k.startswith(name_id) or (
-                v.meta.id.startswith(name_id) and v.meta.id == v.name
+        vivenvs = self._cache.vivenvs
+
+        for vivenv in vivenvs:
+            if name_id == vivenv.meta.id:
+                matches.append(vivenv)
+            elif vivenv.name == name_id:
+                matches.append(vivenv)
+            elif vivenv.name.startswith(name_id) or (
+                vivenv.meta.id.startswith(name_id) and vivenv.meta.id == vivenv.name
             ):
-                matches.append(v)
-            elif v.name.startswith(name_id):
-                matches.append(v)
+                matches.append(vivenv)
+            elif vivenv.name.startswith(name_id):
+                matches.append(vivenv)
 
         if len(matches) == 1:
             return matches[0]
@@ -1457,13 +1445,11 @@ class Viv:
             vivenvs = self._cache.vivenvs
 
         if quiet:
-            sys.stdout.write(
-                "\n".join((vivenv.meta.id for _, vivenv in vivenvs.items())) + "\n"
-            )
+            sys.stdout.write("\n".join((vivenv.meta.id for vivenv in vivenvs)) + "\n")
             sys.exit(0)
 
         if size:
-            for _, vivenv in vivenvs.items():
+            for vivenv in vivenvs:
                 vivenv.get_size()
 
         if len(self._cache.vivenvs) == 0:
@@ -1471,14 +1457,14 @@ class Viv:
         elif len(vivenvs) == 0 and filter:
             log.info("no vivenvs match filter")
         elif verbose:
-            for _, vivenv in vivenvs.items():
+            for vivenv in vivenvs:
                 vivenv.tree()
         elif use_json:
             sys.stdout.write(
-                json.dumps({k: v.meta.__dict__ for k, v in vivenvs.items()})
+                json.dumps({vivenv.name: vivenv.meta.__dict__ for vivenv in vivenvs()})
             )
         else:
-            for _, vivenv in vivenvs.items():
+            for vivenv in vivenvs:
                 vivenv.show()
 
     def cmd_exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
