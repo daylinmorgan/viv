@@ -985,7 +985,7 @@ class ViVenv:
         size = float(
             sum(p.stat().st_size for p in Path(self.path).rglob("*") if p.is_file())
         )
-        for unit in ("B", "K", "M", "G", "T"):
+        for unit in ("", "K", "M", "G", "T"):
             if size < 1024:
                 break
             size /= 1024
@@ -1022,7 +1022,7 @@ class ViVenv:
         finally:
             self.set_path(_path)
 
-    def show(self) -> None:
+    def show(self, size_pad: int) -> None:
         _id = (
             self.meta.id[:8]
             if self.meta.id == self.name
@@ -1031,7 +1031,7 @@ class ViVenv:
         size = getattr(self, "size", None)
         line = []
         if size:
-            line.append(f"""{a.yellow}{size}{a.end}""")
+            line.append(f"""{a.yellow}{size:>{size_pad}}{a.end}""")
 
         line.extend(
             (
@@ -1448,9 +1448,12 @@ class Viv:
             sys.stdout.write("\n".join((vivenv.meta.id for vivenv in vivenvs)) + "\n")
             sys.exit(0)
 
+        # NOTE: this feels out of place
+        size_pad = 0
         if size:
             for vivenv in vivenvs:
                 vivenv.get_size()
+                size_pad = max(size_pad, len(vivenv.size))
 
         if len(self._cache.vivenvs) == 0:
             log.info("no vivenvs setup")
@@ -1465,7 +1468,7 @@ class Viv:
             )
         else:
             for vivenv in vivenvs:
-                vivenv.show()
+                vivenv.show(size_pad)
 
     def cmd_exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
         """\
