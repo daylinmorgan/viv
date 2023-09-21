@@ -46,11 +46,14 @@ def release():
     next = f"{datetime.now().year}.{inc_build(build)}"
     msg = f"bump {current} -> {next}"
     FILE.write_text(
-        re.sub(r'__version__ = "[\d\.]+"', f'__version__ = "{next}"', FILE.read_text())
+        re.sub(r'__version__ = ".*"', f'__version__ = "{next}"', FILE.read_text())
     )
     subprocess.run(["git", "add", FILE])
     subprocess.run(["git", "commit", "-m", msg, "--no-verify"])
     subprocess.run(["git", "tag", f"v{next}"])
+    FILE.write_text(
+        re.sub(r'__version__ = ".*"', f'__version__ = "{next}-dev"', FILE.read_text())
+    )
 
 
 if __name__ == "__main__":
