@@ -1324,19 +1324,20 @@ class Viv:
         self.local_source: Optional[Path] = None
         self.running_source = Path(__file__).resolve()
         self.local = not str(self.running_source).startswith("/proc/")
-        if self.local:
-            self.local_source = self.running_source
-            self.local_version = __version__
-        else:
-            try:
-                _local_viv = __import__("viv")
-                if _local_viv.__file__:
-                    self.local_source = Path(_local_viv.__file__)
-                    self.local_version = _local_viv.__version__
-                else:
-                    self.local_version = "Not Found"
-            except ImportError:
+        try:
+            # prevent running `viv` from being imported
+            curr = sys.path[0]
+            sys.path = sys.path[1:]
+            _local_viv = __import__("viv")
+            sys.path.insert(0, curr)
+
+            if _local_viv.__file__:
+                self.local_source = Path(_local_viv.__file__)
+                self.local_version = _local_viv.__version__
+            else:
                 self.local_version = "Not Found"
+        except ImportError:
+            self.local_version = "Not Found"
 
         if self.local_source:
             self.git = (self.local_source.parent.parent.parent / ".git").is_dir()
@@ -1721,11 +1722,12 @@ class Viv:
 
         with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
             tmppath = Path(tmpdir)
-            scriptpath = tmppath / name
 
             if Path(script).is_file():
-                script_text = Path(script).read_text()
+                scriptpath = Path(script).absolute()
+                script_text = scriptpath.read_text()
             else:
+                scriptpath = tmppath / name
                 script_text = fetch_script(script)
 
             viv_used = uses_viv(script_text)
@@ -1752,7 +1754,11 @@ class Viv:
                 log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
                 subprocess_run_quit(
                     [sys.executable, "-S", scriptpath, *rest],
-                    env=dict(env, VIV_SPEC=" ".join(f"'{req}'" for req in spec)),
+                    env=dict(
+                        env,
+                        VIV_SPEC=" ".join(f"'{req}'" for req in spec),
+                        PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
+                    ),
                 )
             elif not spec and not deps:
                 log.warning("using viv with empty spec, skipping vivenv creation")
