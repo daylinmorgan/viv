@@ -2142,12 +2142,13 @@ class Cli:
                     cmd,
                     parents=[self.parsers.get(k) for k in self.cmd_arg_group_map[cmd]],
                 )
-
         if "--" in sys.argv:
             i = sys.argv.index("--")
             args = self.parser.parse_args(sys.argv[1:i])
             args.rest = sys.argv[i + 1 :]
-        elif flag := list({"-s", "--script"} & set(sys.argv)):
+        elif {"r", "run"} & set(sys.argv[1:2]) and (
+            flag := list({"-s", "--script"} & set(sys.argv))
+        ):
             i = sys.argv.index(flag[0])
             args = self.parser.parse_args(sys.argv[1 : i + 2])
             args.rest = sys.argv[i + 2 :]
