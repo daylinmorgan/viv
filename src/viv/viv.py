@@ -52,7 +52,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2023.1002"
+__version__ = "2023.1002-dev"
 
 
 class Spinner:
@@ -1792,7 +1792,9 @@ class Viv:
         examples:
           viv r pycowsay -- "viv isn't venv\!"
           viv r rich -b python -- -m rich
-          viv r -s <remote python script>
+          viv r -s <python script>
+
+        note: any args after `-s <python script>` will be passed on
         """
 
         spec = combined_spec(reqs, requirements)
@@ -2127,6 +2129,10 @@ class Cli:
             i = sys.argv.index("--")
             args = self.parser.parse_args(sys.argv[1:i])
             args.rest = sys.argv[i + 1 :]
+        elif flag := list({"-s", "--script"} & set(sys.argv)):
+            i = sys.argv.index(flag[0])
+            args = self.parser.parse_args(sys.argv[1 : i + 2])
+            args.rest = sys.argv[i + 2 :]
         else:
             args = self.parser.parse_args()
             if args.func.__name__ in ("cmd_run", "cmd_exe"):
