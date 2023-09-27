@@ -54,10 +54,7 @@ def release(session):
     session.run("./scripts/release.py", external=True)
 
 
-# @nox.session(
-#     python=["3.8", "3.9", "3.10", "3.11"]
-# )
-# def test(session):
-#     pdm_install(session,'test')
-#     session.run('pytest')
-#
+@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
+def test(session):
+    pdm_install(session, "test")
+    session.run("pytest")

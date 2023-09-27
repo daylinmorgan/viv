@@ -24,13 +24,17 @@ version = { source = "scm" }
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "pre-commit>=3",
-    "mypy>=0.991",
+  "pre-commit>=3",
+  "mypy>=0.991",
 ]
 docs = [
-    "mkdocs-material>=9.1.15",
-    "yartsu"
+  "mkdocs-material>=9.1.15",
+  "yartsu"
 ]
+test = [
+  "pytest",
+  "sampleproject"
+] 
 
 [tool.ruff]
 select = ["E","F","I"]

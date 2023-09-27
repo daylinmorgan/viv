@@ -175,3 +175,4 @@ docs/index.md
 docs/cli.md
 docs/viv.py
 docs/svgs
+/tests/.viv-cache
