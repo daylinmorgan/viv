@@ -182,20 +182,20 @@ class Ansi:
     """control ouptut of ansi(VT100) control codes"""
 
     def __init__(self) -> None:
-        self.bold: str = "\033[1m"
-        self.dim: str = "\033[2m"
-        self.underline: str = "\033[4m"
-        self.red: str = "\033[1;31m"
-        self.green: str = "\033[1;32m"
-        self.yellow: str = "\033[1;33m"
-        self.magenta: str = "\033[1;35m"
-        self.cyan: str = "\033[1;36m"
-        self.end: str = "\033[0m"
+        self.bold = "\033[1m"
+        self.dim = "\033[2m"
+        self.underline = "\033[4m"
+        self.red = "\033[1;31m"
+        self.green = "\033[1;32m"
+        self.yellow = "\033[1;33m"
+        self.magenta = "\033[1;35m"
+        self.cyan = "\033[1;36m"
+        self.end = "\033[0m"
 
         # for argparse help
-        self.header: str = self.cyan
-        self.option: str = self.yellow
-        self.metavar: str = "\033[33m"  # normal yellow
+        self.header = self.cyan
+        self.option = self.yellow
+        self.metavar = "\033[33m"  # normal yellow
 
         if not Env().force_color and (Env().no_color or not sys.stderr.isatty()):
             for attr in self.__dict__:
@@ -1185,7 +1185,7 @@ def make_executable(path: Path) -> None:
 def uses_viv(txt: str) -> bool:
     return bool(
         re.search(
-            """
+            r"""
             ^(?!\#)\s*
             (?:__import__\(\s*["']viv["']\s*\))
             |
@@ -1790,7 +1790,7 @@ class Viv:
         run an app/script with an on-demand venv
 
         examples:
-          viv r pycowsay -- "viv isn't venv\!"
+          viv r pycowsay -- "viv isn't venv\\!"
           viv r rich -b python -- -m rich
           viv r -s <python script>
 
