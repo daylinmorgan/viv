@@ -1,4 +1,4 @@
-#!/usr/bin/env -S python3 -S
+#!/usr/bin/env python3
 """viv isn't venv!
 
   viv -h
@@ -13,6 +13,7 @@ import itertools
 import json
 import logging
 import os
+import platform
 import re
 import shutil
 import site
@@ -158,7 +159,22 @@ class Env:
         return run_mode
 
 
+class System:
+    def __init__(self) -> None:
+        self._windows = platform.system() == "Windows"
+        (self.bin_dir, *_) = ("Scripts",) if self._windows else ("bin",)
+
+    def bin(self, exe: str) -> str:
+        return f"{exe}.exe" if self._windows else exe
+
+
+system = System()
+
+
 class Cfg:
+    def __init__(self) -> None:
+        self.windows = platform.system() == "Windows"
+
     @property
     def src(self) -> Path:
         p = Path(Env().xdg_data_home) / "viv" / "viv.py"
@@ -889,8 +905,10 @@ class ViVenv:
 
     def set_path(self, path: Path | None = None) -> None:
         self.path = path if path else Cfg().cache_venv / self.name
-        self.python = str((self.path / "bin" / "python").absolute())
-        self.pip = ("pip", "--python", self.python)
+        self.python = str(
+            (self.path / system.bin_dir / system.bin("python")).absolute()
+        )
+        self.pip = (system.bin("pip"), "--python", self.python)
 
     def _validate_spec(self, spec: List[str]) -> List[str]:
         """ensure spec is at least of sequence of strings
@@ -907,13 +925,13 @@ class ViVenv:
         return sorted(spec)
 
     def bin_exists(self, bin: str) -> None:
-        if not (self.path / "bin" / bin).is_file():
+        if not (self.path / system.bin_dir / bin).is_file():
             message = f"{a.bold}{bin}{a.end} does not exist " "\nOptions:\n"
 
             message += "  " + " ".join(
                 (
                     a.style(p.name, "bold")
-                    for p in (self.path / "bin").iterdir()
+                    for p in (self.path / system.bin_dir).iterdir()
                     if not p.name.lower().startswith("activate")
                 )
             )
@@ -927,7 +945,7 @@ class ViVenv:
                 self.path,
                 prompt=f"viv-{self.name}",
                 clear=True,
-                symlinks=True,
+                symlinks=platform.system() != "Windows",
             )
 
         self.meta.created = str(datetime.today())
@@ -1114,7 +1132,7 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
     spec = combined_spec(reqs, requirements)
 
     cmd = [
-        "pip",
+        system.bin("pip"),
         "install",
         "--dry-run",
         "--quiet",
@@ -1658,7 +1676,7 @@ class Viv:
             )
 
     def _pick_bin(self, reqs: List[str], bin: str) -> Tuple[str, str]:
-        default = re.split(r"[=><~!*]+", reqs[0])[0]
+        default = system.bin(re.split(r"[=><~!*]+", reqs[0])[0])
         return default, (default if not bin else bin)
 
     def cmd_shim(
@@ -1810,7 +1828,7 @@ class Viv:
                     vivenv.meta.write(vivenv.path / "vivmeta.json")
 
                 vivenv.bin_exists(bin)
-                subprocess_run_quit([vivenv.path / "bin" / bin, *rest])
+                subprocess_run_quit([vivenv.path / system.bin_dir / bin, *rest])
 
 
 class Arg:
