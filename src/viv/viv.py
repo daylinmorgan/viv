@@ -1388,10 +1388,10 @@ class Viv:
         else:
             err_quit(f"no matches found for {name_id}")
 
-    def cmd_cache(self) -> None:
+    def cmd_env(self) -> None:
         """manage the viv vivenv cache"""
 
-    def cmd_cache_remove(self, vivenvs: List[str]) -> None:
+    def cmd_env_remove(self, vivenvs: List[str]) -> None:
         """\
         remove a vivenv
 
@@ -1489,7 +1489,7 @@ class Viv:
             for vivenv in vivenvs:
                 vivenv.show(size_pad)
 
-    def cmd_exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
+    def cmd_env_exe(self, vivenv_id: str, cmd: str, rest: List[str]) -> None:
         """\
         run binary/script in existing vivenv
 
@@ -1508,7 +1508,7 @@ class Viv:
         # TODO: use subprocess_run_quit
         subprocess_run(full_cmd, verbose=True)
 
-    def cmd_cache_info(
+    def cmd_env_info(
         self, vivenv_id: str, path: bool, use_json: bool, size: bool
     ) -> None:
         """get metadata about a vivenv"""
@@ -1886,17 +1886,17 @@ class Cli:
                 help="path/to/output file",
             ),
         ],
-        ("cache_info",): [
+        ("env_info",): [
             BoolArg(
                 flag="path",
                 help="print the absolute path to the vivenv",
             ),
         ],
         ("run",): [Arg(flag="script", help="script to execute", metavar="<path/url>")],
-        ("exe", "cache_info"): [
+        ("env_exe", "env_info"): [
             Arg("vivenv_id", help="name/hash of vivenv", metavar="vivenv")
         ],
-        ("list", "cache_info"): [
+        ("list", "env_info"): [
             BoolArg(flag="size", help="calculate size of vivenvs"),
             BoolArg(
                 "--json",
@@ -1960,13 +1960,13 @@ class Cli:
             ),
             BoolArg(flag="system", help="show system/python info too"),
         ],
-        ("exe",): [
+        ("env_exe",): [
             Arg(
                 "cmd",
                 help="command to to execute",
             )
         ],
-        ("cache_remove",): [
+        ("env_remove",): [
             Arg("vivenvs", help="name/hash of vivenv", nargs="*", metavar="vivenv")
         ],
     }
@@ -1976,8 +1976,8 @@ class Cli:
                 "list",
                 "shim",
                 "run",
-                "exe",
-                "cache",
+                # "exe",
+                "env",
                 "freeze",
                 "manage",
             )
@@ -1990,8 +1990,9 @@ class Cli:
             }
             for cmd, subcmd_help in (
                 (
-                    "cache",
+                    "env",
                     (
+                        ("exe", "run binary/script in existing vivenv"),
                         ("info", "get metadata about a vivenv"),
                         ("remove", "remove a vivenv"),
                     ),
@@ -2080,7 +2081,7 @@ class Cli:
             if not (args.reqs or args.script):
                 error("must specify a requirement or --script")
 
-        if name == "cache_info":
+        if name == "env_info":
             if args.use_json and args.path:
                 error("--json and -p/--path are mutually exclusive")
 
@@ -2154,7 +2155,7 @@ class Cli:
             args.rest = sys.argv[i + 2 :]
         else:
             args = self.parser.parse_args()
-            if args.func.__name__ in ("cmd_run", "cmd_exe"):
+            if args.func.__name__ in ("cmd_run", "cmd_env_exe"):
                 args.rest = []
 
         self._validate_args(args)
