@@ -28,7 +28,10 @@ dev = [
   "mypy>=0.991",
 ]
 docs = [
-  "mkdocs-material>=9.1.15",
+  "sphinx",
+  "sphinx-autobuild",
+  "myst-parser",
+  "furo",
   "yartsu"
 ]
 test = [

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 from pathlib import Path
 
 import nox
@@ -42,11 +43,11 @@ def docs(session):
     if not Path("docs/svgs").is_dir():
         svgs(session)
 
-    session.run("make", "docs", external=True)
+    shutil.copyfile("src/viv/viv.py", "docs/viv.py")
     if session.interactive:
-        session.run("mkdocs", "serve")
+        session.run("sphinx-autobuild", "docs", "site", "--port", "8787")
     else:
-        session.run("mkdocs", "build")
+        session.run("sphinx-build", "docs", "site")
 
 
 @nox.session

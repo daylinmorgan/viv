@@ -170,9 +170,9 @@ poetry.toml
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 .task.mk
-# copy of README.md
-docs/index.md
+
 docs/cli.md
 docs/viv.py
 docs/svgs
+docs/public
 /tests/.viv-cache

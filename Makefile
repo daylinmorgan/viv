@@ -10,16 +10,6 @@ assets/viv-help.svg:
 dev-install:
 	ln -sf $(PWD)/src/viv/viv.py ~/.local/share/viv/viv.py
 
-## docs |> update docs files
-docs: docs/viv.py docs/index.md
-
-docs/viv.py: src/viv/viv.py
-	@cp $< $@
-
-docs/index.md: README.md
-	@printf -- '---\nhide: [navigation]\n---\n\n' > $@
-	@cat $< >> $@
-
 examples/black: .FORCE
 	rm -f $@
 	viv shim black -y -s -f -o $@

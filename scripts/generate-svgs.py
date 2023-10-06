@@ -33,7 +33,7 @@ cli_doc = """\
 hide: [navigation]
 ---
 
-# cli
+# CLI Reference
 
 ![help](./svgs/viv-help.svg)
 """
