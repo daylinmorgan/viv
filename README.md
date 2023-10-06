@@ -35,14 +35,14 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run pycowsay -- "viv isn't venv\!"
 
 `Viv` is a standalone dependency-free `venv` creator [^1].
 `Viv` helps you ignore silly things like managing temporary or rarely used virtual environments,
-while still unleashing the full power of python scripting with it's entire ecosystem at your disposal.
+while still unleashing the full power of Python scripting with its entire ecosystem at your disposal.
 
 `Viv`'s uncompromising insistence on portability means that it will always:
 
 1. only use the standard library
 2. never exceed a single script.
 
-For that reason any usage of the `cli` can be accomplished using a remote copy as seen in the below install command.
+For that reason, any usage of the CLI can be accomplished using a remote copy as seen in the below install command.
 
 ## Setup
 
@@ -52,8 +52,9 @@ Run the below command to install `viv`.
 python3 <(curl -fsSL viv.dayl.in/viv.py) manage install
 ```
 
-To access `viv` from within scripts you should add it's location to your `PYTHONPATH`.
-By default `viv` will be installed to `$XDG_DATA_HOME/viv` or `~/.local/share/viv` you can customize this with `--src`.
+To access `viv` from within scripts you should add its location to your `PYTHONPATH`.
+By default `viv` will be installed to `$XDG_DATA_HOME/viv` or `~/.local/share/viv`;
+you can customize this with `--src`.
 
 ```sh
 export PYTHONPATH="$PYTHONPATH:$HOME/.local/share/viv"
@@ -65,12 +66,12 @@ export PYTHONPATH="$PYTHONPATH:$HOME/.local/share/viv"
 pip install viv
 ```
 
-Why is this *not recommended*? Mainly, because `viv` is all about hacking your `sys.path`.
-Placing it in it's own virtual environment or installing in a user site directory may complicate this endeavor.
+Why is this *not recommended?* Mainly because `viv` is all about hacking your `sys.path`.
+Placing it in its own virtual environment or installing in a user site directory may complicate this endeavor.
 
 ## Usage
 
-In any python script with external dependencies you can add this line,
+In any Python script with external dependencies you can add this line
 to automate `vivenv` creation and installation of dependencies.
 
 ```python
@@ -83,7 +84,7 @@ To remove all `vivenvs` you can use the below command:
 viv cache remove $(viv list -q)
 ```
 
-To remove `viv` all together you can use the included `purge` command:
+To remove `viv` altogether you can use the included `purge` command:
 
 ```sh
 python3 <(curl -fsSL viv.dayl.in/viv.py) manage purge
@@ -118,11 +119,14 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run \
 
 ## Bonus: use `viv` with just standalone snippet (37LOC)
 
-`--standalone` will auto-generate a mini function version of `viv` to accomplish the same basic task as using a local copy of `viv`.
-After generating this standalone `shim` you can freely use this script across unix machines which have `python>3.8`.
-See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black) for output of below command.
+`--standalone` will auto-generate a mini-function version of `viv`
+to accomplish the same basic task as using a local copy of `viv`.
+After generating this standalone shim you can freely use this script
+across Unix machines which have Python > 3.8.
+See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black)
+for output of the below command.
 
-`viv freeze` also supports `--standalone`
+`viv freeze` also supports `--standalone`.
 
 ```sh
 python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --freeze
