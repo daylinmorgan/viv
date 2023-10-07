@@ -24,7 +24,10 @@ CLI_DOC_PATH = DOCS_PATH / "cli.md"
         [],
     )
 ).update(
-    {"manage": ["update", "purge", "show", "install"], "cache": ["info", "remove"]},
+    {
+        "manage": ["update", "purge", "show", "install"],
+        "env": ["exe", "info", "remove"],
+    },
 )
 
 
