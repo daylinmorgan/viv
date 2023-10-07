@@ -1,6 +1,7 @@
 name: 🧪 Run Tests
+
 on:
-  pr:
+  pull_request:
   push:
   workflow_call:
   workflow_dispatch:
