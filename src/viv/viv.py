@@ -53,7 +53,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2023.1002-dev"
+__version__ = "2023.1003"
 
 
 class Spinner:
