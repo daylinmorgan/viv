@@ -15,7 +15,6 @@ CLI_DOC_PATH = DOCS_PATH / "cli.md"
     cmds := dict.fromkeys(
         (
             "list",
-            "exe",
             "manage",
             "freeze",
             "shim",
