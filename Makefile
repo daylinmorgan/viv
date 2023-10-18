@@ -15,7 +15,7 @@ examples/black: .FORCE
 	viv shim black -y -s -f -o $@
 
 clean: ## remove build artifacts
-	rm -rf {build,dist}
+	rm -rf build dist
 
 EXAMPLES = cli.py sys_path.py exe_specific.py frozen_import.py named_env.py scrape.py
 generate-example-vivens: ##
