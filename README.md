@@ -81,7 +81,7 @@ __import__("viv").use("click")
 To remove all `vivenvs` you can use the below command:
 
 ```sh
-viv cache remove $(viv list -q)
+viv env remove $(viv list -q)
 ```
 
 To remove `viv` altogether you can use the included `purge` command:
