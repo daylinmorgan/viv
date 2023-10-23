@@ -1725,9 +1725,7 @@ class Viv:
             if run_mode == "ephemeral":
                 new_cache = tmpdir
             elif run_mode == "semi-ephemeral":
-                new_cache = str(
-                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache" / "venvs"
-                )
+                new_cache = str(Path(tempfile.gettempdir()) / "viv-ephemeral-cache")
 
             env.update({"VIV_CACHE": new_cache})
             os.environ["VIV_CACHE"] = new_cache
