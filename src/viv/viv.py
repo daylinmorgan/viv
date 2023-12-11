@@ -812,6 +812,20 @@ def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
     ).hexdigest()
 
 
+def _get_user() -> str:
+    """good-faith attempt to ascertain user name for viv cache"""
+    from getpass import getuser, GetPassWarning  # noqa
+
+    try:
+        user = getuser()
+
+    except ImportError as e:
+        user = "dummy"
+        log.info(e.msg)
+        log.info("failed to get user with getpass.getuser", "using `dummy` as fallback")
+    return user
+
+
 class Meta:
     def __init__(
         self,
@@ -1010,7 +1024,6 @@ class ViVenv:
 
         self.size = f"{size:.1f}{unit}B"
 
-    # TODO: reconsider this function which is starting to do heavy lifting
     @contextmanager
     def use(self, keep: bool = True) -> Generator[None, None, None]:
         run_mode = Env().viv_run_mode
@@ -1020,6 +1033,7 @@ class ViVenv:
             self.ensure()
             self.touch()
 
+        # TODO: get username for directories below
         try:
             if self.loaded or keep or run_mode == "persist":
                 common()
@@ -1031,7 +1045,7 @@ class ViVenv:
                     yield
             elif run_mode == "semi-ephemeral":
                 ephemeral_cache = _path_ok(
-                    Path(tempfile.gettempdir()) / "viv-ephemeral-cache"
+                    Path(tempfile.gettempdir()) / f"viv-ephemeral-cache-{_get_user()}"
                 )
                 os.environ.update(dict(VIV_CACHE=str(ephemeral_cache)))
                 self.set_path(ephemeral_cache / "venvs" / self.name)
