@@ -101,7 +101,7 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run cowsay -- "moove over, pip-run"
 
 ```sh
 python -m pip-run requests -- -c "import requests; print(requests.get('https://pypi.org/project/pip-run').status_code)"
-python -m viv requests -b python -- -c "import requests; print(requests.get('https://pypi.org/project/viv').status_code)"
+python -m viv run requests -b python -- -c "import requests; print(requests.get('https://pypi.org/project/viv').status_code)"
 ```
 
 ### [pipx](https://github.com/pypa/pipx/)
