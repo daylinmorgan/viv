@@ -2012,8 +2012,8 @@ METADATA_BLOCK = (
 )
 
 
-def read_metadata_block(script: str) -> dict:
-    name = "pyproject"
+def _read_metadata_block(script: str) -> dict:
+    name = "script"
     matches = list(
         filter(lambda m: m.group("type") == name, re.finditer(METADATA_BLOCK, script))
     )
@@ -2025,29 +2025,6 @@ def read_metadata_block(script: str) -> dict:
         )
     else:
         return {}
-
-
-# DEPENDENCY_BLOCK_MARKER = r"(?i)^#\s+script\s+dependencies:\s*$"
-#
-# def read_dependency_block(txt: str) -> Generator[str, None, None]:
-#     lines = iter(txt.splitlines())
-#     for line in lines:
-#         if re.match(DEPENDENCY_BLOCK_MARKER, line):
-#             for line in lines:
-#                 if not line.startswith("#"):
-#                     break
-#                 # Remove comments. An inline comment is introduced by
-#                 # a hash, which must be preceded and followed by a
-#                 # space. The initial hash will be skipped as it has
-#                 # no space before it.
-#                 line = line.split(" # ", maxsplit=1)[0]
-#                 line = line[1:].strip()
-#                 if not line:
-#                     continue
-#                 # let pip handle the requirement errors
-#                 yield line
-#             break
-#
 
 
 def _parse_date(txt: str) -> datetime:
@@ -2555,9 +2532,9 @@ class Viv:
                 script_text = fetch_script(script)
 
             viv_used = uses_viv(script_text)
-            deps = (
-                read_metadata_block(script_text).get("run", {}).get("dependencies", [])
-            )
+            deps = _read_metadata_block(script_text).get("dependencies", [])
+
+            # TODO: incorporate python version checking...
 
             if viv_used and deps:
                 error(
