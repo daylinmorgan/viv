@@ -30,8 +30,9 @@ dev = [
 docs = [
   "sphinx",
   "sphinx-autobuild",
+  "sphinx-copybutton",
   "myst-parser",
-  "furo",
+  "shibuya",
   "yartsu"
 ]
 test = [
