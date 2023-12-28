@@ -1033,7 +1033,6 @@ class ViVenv:
             self.ensure()
             self.touch()
 
-        # TODO: get username for directories below
         try:
             if self.loaded or keep or run_mode == "persist":
                 common()
@@ -1514,9 +1513,7 @@ class Viv:
 
         vivenv = self._match_vivenv(vivenv_id)
         bin = vivenv.path / "bin" / cmd
-
         vivenv.bin_exists(bin.name)
-
         full_cmd = [str(bin), *rest]
 
         # TODO: use subprocess_run_quit
@@ -1988,7 +1985,6 @@ class Cli:
                 "list",
                 "shim",
                 "run",
-                # "exe",
                 "env",
                 "freeze",
                 "manage",
