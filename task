@@ -8,8 +8,11 @@ function task:venv {
 }
 
 function task:dev-install {
-	: "symlink development version"
-	ln -sf "$(PWD)/src/viv/viv.py" ~/.local/share/viv/viv.py
+  : "symlink development version"
+  mkdir -p ~/.local/share/viv
+  mkdir -p ~/.local/bin
+  ln -sf "$(pwd)/src/viv/viv.py" ~/.local/share/viv/viv.py
+  ln -sf ~/.local/share/viv/viv.py ~/.local/bin/viv
 }
 
 function task:_black {
