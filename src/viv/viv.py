@@ -2173,9 +2173,20 @@ class Cli:
         )
 
 
+def _no_traceback_excepthook(exc_type, exc_val, traceback):
+    # https://stackoverflow.com/questions/7073268/remove-traceback-in-python-on-ctrl-c
+    pass
+
+
 def main() -> None:
-    viv = Viv()
-    Cli(viv).run()
+    try:
+        viv = Viv()
+        Cli(viv).run()
+    except KeyboardInterrupt:
+        echo(f"caught {a.bold}SIGINT")
+        if sys.excepthook is sys.__excepthook__:
+            sys.excepthook = _no_traceback_excepthook
+        raise
 
 
 if __name__ == "__main__":
