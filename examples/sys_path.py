@@ -7,9 +7,7 @@ import sys
 old_sys_path = sys.path.copy()  # noqa
 
 
-__import__("sys").path.append(
-    __import__("os").path.expanduser("~/.local/share/viv")
-)  # noqa # isort: off
+__import__("sys").path.append(__import__("os").path.expanduser("~/.local/share/viv"))  # noqa # isort: off
 __import__("viv").use("rich")  # noqa # isort: off
 
 from difflib import unified_diff
