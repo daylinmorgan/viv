@@ -24,8 +24,9 @@ version = { source = "scm" }
 
 [tool.pdm.dev-dependencies]
 dev = [
-  "pre-commit>=3",
-  "mypy>=0.991",
+    "pre-commit>=3",
+    "mypy>=0.991",
+    "astor>=0.8.1",
 ]
 docs = [
   "sphinx",

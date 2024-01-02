@@ -176,3 +176,5 @@ docs/viv.py
 docs/svgs
 docs/public
 /tests/.viv-cache
+/scripts/tomli
+/scripts/packaging

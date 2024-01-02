@@ -56,7 +56,8 @@ from typing import (
 __version__ = "2023.1003-pep723"
 
 
-##### START VENDORED TOMLI #####
+#### START VENDORED TOMLI ####
+
 try:
     from tomllib import loads as toml_loads
 except ImportError:
@@ -65,23 +66,23 @@ except ImportError:
     # SPDX-License-Identifier: MIT
     # SPDX-FileCopyrightText: 2021 Taneli Hukkinen
     # Licensed to PSF under a Contributor Agreement.
+
     import string  # noqa
     from collections.abc import Iterable  # noqa
     from functools import lru_cache  # noqa
     from datetime import date, datetime, time, timedelta, timezone, tzinfo  # noqa
+    from io import BinaryIO
     from types import MappingProxyType  # noqa
     from typing import IO, Any, Callable, NamedTuple  # noqa
 
-    ParseFloat = Callable[[str], Any]
+    v_tomli_ParseFloat = Callable[[str], Any]
     Key = Tuple[str, ...]
-    Pos = int
-    # - 00:32:00.999999
-    # - 00:32:00
-    __tomli___TIME_RE_STR = (
-        r"([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(?:\.([0-9]{1,6})[0-9]*)?"
+    v_tomli_Pos = int
+    v_tomli__TIME_RE_STR = (
+        "([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(?:\\.([0-9]{1,6})[0-9]*)?"
     )
-    __tomli__RE_NUMBER = re.compile(
-        r"""
+    v_tomli_RE_NUMBER = re.compile(
+        """
     0
     (?:
         x[0-9A-Fa-f](?:_?[0-9A-Fa-f])*   # hex
@@ -93,31 +94,26 @@ except ImportError:
     |
     [+-]?(?:0|[1-9](?:_?[0-9])*)         # dec, integer part
     (?P<floatpart>
-        (?:\.[0-9](?:_?[0-9])*)?         # optional fractional part
+        (?:\\.[0-9](?:_?[0-9])*)?         # optional fractional part
         (?:[eE][+-]?[0-9](?:_?[0-9])*)?  # optional exponent part
     )
     """,
         flags=re.VERBOSE,
     )
-    __tomli__RE_LOCALTIME = re.compile(__tomli___TIME_RE_STR)
-    __tomli__RE_DATETIME = re.compile(
-        rf"""
+    v_tomli_RE_LOCALTIME = re.compile(v_tomli__TIME_RE_STR)
+    v_tomli_RE_DATETIME = re.compile(
+        f"""
     ([0-9]{{4}})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])  # date, e.g. 1988-10-27
     (?:
         [Tt ]
-        {__tomli___TIME_RE_STR}
+        {v_tomli__TIME_RE_STR}
         (?:([Zz])|([+-])([01][0-9]|2[0-3]):([0-5][0-9]))?  # optional time offset
     )?
     """,
         flags=re.VERBOSE,
     )
 
-    def __tomli__match_to_datetime(match: re.Match) -> datetime | date:
-        """Convert a `__tomli__RE_DATETIME` match to `datetime.datetime`
-        or `datetime.date`.
-        Raises ValueError if the match does not correspond to a valid date
-        or datetime.
-        """
+    def v_tomli_match_to_datetime(match: re.Match) -> datetime | date:
         (
             year_str,
             month_str,
@@ -137,69 +133,65 @@ except ImportError:
         hour, minute, sec = int(hour_str), int(minute_str), int(sec_str)
         micros = int(micros_str.ljust(6, "0")) if micros_str else 0
         if offset_sign_str:
-            tz: tzinfo | None = __tomli__cached_tz(
+            tz: tzinfo | None = v_tomli_cached_tz(
                 offset_hour_str, offset_minute_str, offset_sign_str
             )
         elif zulu_time:
             tz = timezone.utc
-        else:  # local date-time
+        else:
             tz = None
         return datetime(year, month, day, hour, minute, sec, micros, tzinfo=tz)
 
     @lru_cache(maxsize=None)
-    def __tomli__cached_tz(hour_str: str, minute_str: str, sign_str: str) -> timezone:
+    def v_tomli_cached_tz(hour_str: str, minute_str: str, sign_str: str) -> timezone:
         sign = 1 if sign_str == "+" else -1
         return timezone(
-            timedelta(
-                hours=sign * int(hour_str),
-                minutes=sign * int(minute_str),
-            )
+            timedelta(hours=sign * int(hour_str), minutes=sign * int(minute_str))
         )
 
-    def __tomli__match_to_localtime(match: re.Match) -> time:
+    def v_tomli_match_to_localtime(match: re.Match) -> time:
         hour_str, minute_str, sec_str, micros_str = match.groups()
         micros = int(micros_str.ljust(6, "0")) if micros_str else 0
         return time(int(hour_str), int(minute_str), int(sec_str), micros)
 
-    def __tomli__match_to_number(match: re.Match, parse_float: ParseFloat) -> Any:
+    def v_tomli_match_to_number(
+        match: re.Match, parse_float: v_tomli_ParseFloat
+    ) -> Any:
         if match.group("floatpart"):
             return parse_float(match.group())
         return int(match.group(), 0)
 
-    __tomli__ASCII_CTRL = frozenset(chr(i) for i in range(32)) | frozenset(chr(127))
-    # Neither of these sets include quotation mark or backslash. They are
-    # currently handled as separate cases in the parser functions.
-    __tomli__ILLEGAL_BASIC_STR_CHARS = __tomli__ASCII_CTRL - frozenset("\t")
-    __tomli__ILLEGAL_MULTILINE_BASIC_STR_CHARS = __tomli__ASCII_CTRL - frozenset("\t\n")
-    __tomli__ILLEGAL_LITERAL_STR_CHARS = __tomli__ILLEGAL_BASIC_STR_CHARS
-    __tomli__ILLEGAL_MULTILINE_LITERAL_STR_CHARS = (
-        __tomli__ILLEGAL_MULTILINE_BASIC_STR_CHARS
+    v_tomli_ASCII_CTRL = frozenset(chr(i) for i in range(32)) | frozenset(chr(127))
+    v_tomli_ILLEGAL_BASIC_STR_CHARS = v_tomli_ASCII_CTRL - frozenset("\t")
+    v_tomli_ILLEGAL_MULTILINE_BASIC_STR_CHARS = v_tomli_ASCII_CTRL - frozenset("\t\n")
+    v_tomli_ILLEGAL_LITERAL_STR_CHARS = v_tomli_ILLEGAL_BASIC_STR_CHARS
+    v_tomli_ILLEGAL_MULTILINE_LITERAL_STR_CHARS = (
+        v_tomli_ILLEGAL_MULTILINE_BASIC_STR_CHARS
     )
-    __tomli__ILLEGAL_COMMENT_CHARS = __tomli__ILLEGAL_BASIC_STR_CHARS
-    __tomli__TOML_WS = frozenset(" \t")
-    __tomli__TOML_WS_AND_NEWLINE = __tomli__TOML_WS | frozenset("\n")
-    __tomli__BARE_KEY_CHARS = frozenset(string.ascii_letters + string.digits + "-_")
-    __tomli__KEY_INITIAL_CHARS = __tomli__BARE_KEY_CHARS | frozenset("\"'")
-    __tomli__HEXDIGIT_CHARS = frozenset(string.hexdigits)
-    __tomli__BASIC_STR_ESCAPE_REPLACEMENTS = MappingProxyType(
+    v_tomli_ILLEGAL_COMMENT_CHARS = v_tomli_ILLEGAL_BASIC_STR_CHARS
+    v_tomli_TOML_WS = frozenset(" \t")
+    v_tomli_TOML_WS_AND_NEWLINE = v_tomli_TOML_WS | frozenset("\n")
+    v_tomli_BARE_KEY_CHARS = frozenset(string.ascii_letters + string.digits + "-_")
+    v_tomli_KEY_INITIAL_CHARS = v_tomli_BARE_KEY_CHARS | frozenset("\"'")
+    v_tomli_HEXDIGIT_CHARS = frozenset(string.hexdigits)
+    v_tomli_BASIC_STR_ESCAPE_REPLACEMENTS = MappingProxyType(
         {
-            "\\b": "\u0008",  # backspace
-            "\\t": "\u0009",  # tab
-            "\\n": "\u000A",  # linefeed
-            "\\f": "\u000C",  # form feed
-            "\\r": "\u000D",  # carriage return
-            '\\"': "\u0022",  # quote
-            "\\\\": "\u005C",  # backslash
+            "\\b": "\x08",
+            "\\t": "\t",
+            "\\n": "\n",
+            "\\f": "\x0c",
+            "\\r": "\r",
+            '\\"': '"',
+            "\\\\": "\\",
         }
     )
 
-    class TOMLDecodeError(ValueError):
-        """An error raised if a document is not valid TOML."""
+    class v_tomli_TOMLDecodeError(ValueError):
+        pass
 
-    def __tomli__load(
-        __fp: IO[bytes], *, parse_float: ParseFloat = float
+    def v_tomli_load(
+        __fp: BinaryIO, *, parse_float: v_tomli_ParseFloat = float
     ) -> dict[str, Any]:
-        """Parse TOML from a binary file object."""
         b = __fp.read()
         try:
             s = b.decode()
@@ -207,32 +199,18 @@ except ImportError:
             raise TypeError(
                 "File must be opened in binary mode, e.g. use `open('foo.toml', 'rb')`"
             ) from None
-        return __tomli__loads(s, parse_float=parse_float)
+        return v_tomli_loads(s, parse_float=parse_float)
 
-    def __tomli__loads(
-        __s: str, *, parse_float: ParseFloat = float
-    ) -> dict[str, Any]:  # noqa: C901
-        """Parse TOML from a string."""
-        # The spec allows converting "\r\n" to "\n", even in string
-        # literals. Let's do so to simplify parsing.
+    def v_tomli_loads(
+        __s: str, *, parse_float: v_tomli_ParseFloat = float
+    ) -> dict[str, Any]:
         src = __s.replace("\r\n", "\n")
         pos = 0
-        out = Output(NestedDict(), Flags())
+        out = v_tomli_Output(v_tomli_NestedDict(), v_tomli_Flags())
         header: Key = ()
-        parse_float = __tomli__make_safe_parse_float(parse_float)
-        # Parse one statement at a time
-        # (typically means one line in TOML source)
+        parse_float = v_tomli_make_safe_parse_float(parse_float)
         while True:
-            # 1. Skip line leading whitespace
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
-            # 2. Parse rules. Expect one of the following:
-            #    - end of file
-            #    - end of line
-            #    - comment
-            #    - key/value pair
-            #    - append dict to list (and move to its namespace)
-            #    - create dict (and move to its namespace)
-            # Skip trailing whitespace when applicable.
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
             try:
                 char = src[pos]
             except IndexError:
@@ -240,9 +218,9 @@ except ImportError:
             if char == "\n":
                 pos += 1
                 continue
-            if char in __tomli__KEY_INITIAL_CHARS:
-                pos = __tomli__key_value_rule(src, pos, out, header, parse_float)
-                pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+            if char in v_tomli_KEY_INITIAL_CHARS:
+                pos = v_tomli_key_value_rule(src, pos, out, header, parse_float)
+                pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
             elif char == "[":
                 try:
                     second_char: str | None = src[pos + 1]
@@ -250,33 +228,26 @@ except ImportError:
                     second_char = None
                 out.flags.finalize_pending()
                 if second_char == "[":
-                    pos, header = __tomli__create_list_rule(src, pos, out)
+                    pos, header = v_tomli_create_list_rule(src, pos, out)
                 else:
-                    pos, header = __tomli__create_dict_rule(src, pos, out)
-                pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+                    pos, header = v_tomli_create_dict_rule(src, pos, out)
+                pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
             elif char != "#":
-                raise __tomli__suffixed_err(src, pos, "Invalid statement")
-            # 3. Skip comment
-            pos = __tomli__skip_comment(src, pos)
-            # 4. Expect end of line or end of file
+                raise v_tomli_suffixed_err(src, pos, "Invalid statement")
+            pos = v_tomli_skip_comment(src, pos)
             try:
                 char = src[pos]
             except IndexError:
                 break
             if char != "\n":
-                raise __tomli__suffixed_err(
+                raise v_tomli_suffixed_err(
                     src, pos, "Expected newline or end of document after a statement"
                 )
             pos += 1
         return out.data.dict
 
-    class Flags:
-        """Flags that map to parsed keys/namespaces."""
-
-        # Marks an immutable namespace (inline array or inline table).
+    class v_tomli_Flags:
         FROZEN = 0
-        # Marks a nest that has been explicitly created and can no longer
-        # be opened using the "[table]" syntax.
         EXPLICIT_NEST = 1
 
         def __init__(self) -> None:
@@ -299,7 +270,7 @@ except ImportError:
                 cont = cont[k]["nested"]
             cont.pop(key[-1], None)
 
-        def set(self, key: Key, flag: int, *, recursive: bool) -> None:  # noqa: A003
+        def set(self, key: Key, flag: int, *, recursive: bool) -> None:
             cont = self._flags
             key_parent, key_stem = key[:-1], key[-1]
             for k in key_parent:
@@ -316,7 +287,7 @@ except ImportError:
 
         def is_(self, key: Key, flag: int) -> bool:
             if not key:
-                return False  # document root has no flags
+                return False
             cont = self._flags
             for k in key[:-1]:
                 if k not in cont:
@@ -331,17 +302,11 @@ except ImportError:
                 return flag in cont["flags"] or flag in cont["recursive_flags"]
             return False
 
-    class NestedDict:
+    class v_tomli_NestedDict:
         def __init__(self) -> None:
-            # The parsed content of the TOML document
             self.dict: dict[str, Any] = {}
 
-        def get_or_create_nest(
-            self,
-            key: Key,
-            *,
-            access_lists: bool = True,
-        ) -> dict:
+        def get_or_create_nest(self, key: Key, *, access_lists: bool = True) -> dict:
             cont: Any = self.dict
             for k in key:
                 if k not in cont:
@@ -364,11 +329,13 @@ except ImportError:
             else:
                 cont[last_key] = [{}]
 
-    class Output(NamedTuple):
-        data: NestedDict
-        flags: Flags
+    class v_tomli_Output(NamedTuple):
+        data: v_tomli_NestedDict
+        flags: v_tomli_Flags
 
-    def __tomli__skip_chars(src: str, pos: Pos, chars: Iterable[str]) -> Pos:
+    def v_tomli_skip_chars(
+        src: str, pos: v_tomli_Pos, chars: Iterable[str]
+    ) -> v_tomli_Pos:
         try:
             while src[pos] in chars:
                 pos += 1
@@ -376,145 +343,149 @@ except ImportError:
             pass
         return pos
 
-    def __tomli__skip_until(
+    def v_tomli_skip_until(
         src: str,
-        pos: Pos,
+        pos: v_tomli_Pos,
         expect: str,
         *,
         error_on: frozenset[str],
         error_on_eof: bool,
-    ) -> Pos:
+    ) -> v_tomli_Pos:
         try:
             new_pos = src.index(expect, pos)
         except ValueError:
             new_pos = len(src)
             if error_on_eof:
-                raise __tomli__suffixed_err(
+                raise v_tomli_suffixed_err(
                     src, new_pos, f"Expected {expect!r}"
                 ) from None
         if not error_on.isdisjoint(src[pos:new_pos]):
             while src[pos] not in error_on:
                 pos += 1
-            raise __tomli__suffixed_err(
+            raise v_tomli_suffixed_err(
                 src, pos, f"Found invalid character {src[pos]!r}"
             )
         return new_pos
 
-    def __tomli__skip_comment(src: str, pos: Pos) -> Pos:
+    def v_tomli_skip_comment(src: str, pos: v_tomli_Pos) -> v_tomli_Pos:
         try:
             char: str | None = src[pos]
         except IndexError:
             char = None
         if char == "#":
-            return __tomli__skip_until(
+            return v_tomli_skip_until(
                 src,
                 pos + 1,
                 "\n",
-                error_on=__tomli__ILLEGAL_COMMENT_CHARS,
+                error_on=v_tomli_ILLEGAL_COMMENT_CHARS,
                 error_on_eof=False,
             )
         return pos
 
-    def __tomli__skip_comments_and_array_ws(src: str, pos: Pos) -> Pos:
+    def v_tomli_skip_comments_and_array_ws(src: str, pos: v_tomli_Pos) -> v_tomli_Pos:
         while True:
             pos_before_skip = pos
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS_AND_NEWLINE)
-            pos = __tomli__skip_comment(src, pos)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS_AND_NEWLINE)
+            pos = v_tomli_skip_comment(src, pos)
             if pos == pos_before_skip:
                 return pos
 
-    def __tomli__create_dict_rule(src: str, pos: Pos, out: Output) -> tuple[Pos, Key]:
-        pos += 1  # Skip "["
-        pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
-        pos, key = __tomli__parse_key(src, pos)
-        if out.flags.is_(key, Flags.EXPLICIT_NEST) or out.flags.is_(key, Flags.FROZEN):
-            raise __tomli__suffixed_err(src, pos, f"Cannot declare {key} twice")
-        out.flags.set(key, Flags.EXPLICIT_NEST, recursive=False)
+    def v_tomli_create_dict_rule(
+        src: str, pos: v_tomli_Pos, out: v_tomli_Output
+    ) -> tuple[v_tomli_Pos, Key]:
+        pos += 1
+        pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
+        pos, key = v_tomli_parse_key(src, pos)
+        if out.flags.is_(key, v_tomli_Flags.EXPLICIT_NEST) or out.flags.is_(
+            key, v_tomli_Flags.FROZEN
+        ):
+            raise v_tomli_suffixed_err(src, pos, f"Cannot declare {key} twice")
+        out.flags.set(key, v_tomli_Flags.EXPLICIT_NEST, recursive=False)
         try:
             out.data.get_or_create_nest(key)
         except KeyError:
-            raise __tomli__suffixed_err(src, pos, "Cannot overwrite a value") from None
+            raise v_tomli_suffixed_err(src, pos, "Cannot overwrite a value") from None
         if not src.startswith("]", pos):
-            raise __tomli__suffixed_err(
+            raise v_tomli_suffixed_err(
                 src, pos, "Expected ']' at the end of a table declaration"
             )
         return pos + 1, key
 
-    def __tomli__create_list_rule(src: str, pos: Pos, out: Output) -> tuple[Pos, Key]:
-        pos += 2  # Skip "[["
-        pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
-        pos, key = __tomli__parse_key(src, pos)
-        if out.flags.is_(key, Flags.FROZEN):
-            raise __tomli__suffixed_err(
+    def v_tomli_create_list_rule(
+        src: str, pos: v_tomli_Pos, out: v_tomli_Output
+    ) -> tuple[v_tomli_Pos, Key]:
+        pos += 2
+        pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
+        pos, key = v_tomli_parse_key(src, pos)
+        if out.flags.is_(key, v_tomli_Flags.FROZEN):
+            raise v_tomli_suffixed_err(
                 src, pos, f"Cannot mutate immutable namespace {key}"
             )
-        # Free the namespace now that it points to another empty list item...
         out.flags.unset_all(key)
-        # ...but this key precisely is still prohibited from table declaration
-        out.flags.set(key, Flags.EXPLICIT_NEST, recursive=False)
+        out.flags.set(key, v_tomli_Flags.EXPLICIT_NEST, recursive=False)
         try:
             out.data.append_nest_to_list(key)
         except KeyError:
-            raise __tomli__suffixed_err(src, pos, "Cannot overwrite a value") from None
+            raise v_tomli_suffixed_err(src, pos, "Cannot overwrite a value") from None
         if not src.startswith("]]", pos):
-            raise __tomli__suffixed_err(
+            raise v_tomli_suffixed_err(
                 src, pos, "Expected ']]' at the end of an array declaration"
             )
         return pos + 2, key
 
-    def __tomli__key_value_rule(
-        src: str, pos: Pos, out: Output, header: Key, parse_float: ParseFloat
-    ) -> Pos:
-        pos, key, value = __tomli__parse_key_value_pair(src, pos, parse_float)
+    def v_tomli_key_value_rule(
+        src: str,
+        pos: v_tomli_Pos,
+        out: v_tomli_Output,
+        header: Key,
+        parse_float: v_tomli_ParseFloat,
+    ) -> v_tomli_Pos:
+        pos, key, value = v_tomli_parse_key_value_pair(src, pos, parse_float)
         key_parent, key_stem = key[:-1], key[-1]
         abs_key_parent = header + key_parent
         relative_path_cont_keys = (header + key[:i] for i in range(1, len(key)))
         for cont_key in relative_path_cont_keys:
-            # Check that dotted key syntax does not redefine an existing table
-            if out.flags.is_(cont_key, Flags.EXPLICIT_NEST):
-                raise __tomli__suffixed_err(
+            if out.flags.is_(cont_key, v_tomli_Flags.EXPLICIT_NEST):
+                raise v_tomli_suffixed_err(
                     src, pos, f"Cannot redefine namespace {cont_key}"
                 )
-            # Containers in the relative path can't be opened with the table syntax or
-            # dotted key/value syntax in following table sections.
-            out.flags.add_pending(cont_key, Flags.EXPLICIT_NEST)
-        if out.flags.is_(abs_key_parent, Flags.FROZEN):
-            raise __tomli__suffixed_err(
+            out.flags.add_pending(cont_key, v_tomli_Flags.EXPLICIT_NEST)
+        if out.flags.is_(abs_key_parent, v_tomli_Flags.FROZEN):
+            raise v_tomli_suffixed_err(
                 src, pos, f"Cannot mutate immutable namespace {abs_key_parent}"
             )
         try:
             nest = out.data.get_or_create_nest(abs_key_parent)
         except KeyError:
-            raise __tomli__suffixed_err(src, pos, "Cannot overwrite a value") from None
+            raise v_tomli_suffixed_err(src, pos, "Cannot overwrite a value") from None
         if key_stem in nest:
-            raise __tomli__suffixed_err(src, pos, "Cannot overwrite a value")
-        # Mark inline table and array namespaces recursively immutable
+            raise v_tomli_suffixed_err(src, pos, "Cannot overwrite a value")
         if isinstance(value, (dict, list)):
-            out.flags.set(header + key, Flags.FROZEN, recursive=True)
+            out.flags.set(header + key, v_tomli_Flags.FROZEN, recursive=True)
         nest[key_stem] = value
         return pos
 
-    def __tomli__parse_key_value_pair(
-        src: str, pos: Pos, parse_float: ParseFloat
-    ) -> tuple[Pos, Key, Any]:
-        pos, key = __tomli__parse_key(src, pos)
+    def v_tomli_parse_key_value_pair(
+        src: str, pos: v_tomli_Pos, parse_float: v_tomli_ParseFloat
+    ) -> tuple[v_tomli_Pos, Key, Any]:
+        pos, key = v_tomli_parse_key(src, pos)
         try:
             char: str | None = src[pos]
         except IndexError:
             char = None
         if char != "=":
-            raise __tomli__suffixed_err(
+            raise v_tomli_suffixed_err(
                 src, pos, "Expected '=' after a key in a key/value pair"
             )
         pos += 1
-        pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
-        pos, value = __tomli__parse_value(src, pos, parse_float)
+        pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
+        pos, value = v_tomli_parse_value(src, pos, parse_float)
         return pos, key, value
 
-    def __tomli__parse_key(src: str, pos: Pos) -> tuple[Pos, Key]:
-        pos, key_part = __tomli__parse_key_part(src, pos)
+    def v_tomli_parse_key(src: str, pos: v_tomli_Pos) -> tuple[v_tomli_Pos, Key]:
+        pos, key_part = v_tomli_parse_key_part(src, pos)
         key: Key = (key_part,)
-        pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+        pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
         while True:
             try:
                 char: str | None = src[pos]
@@ -523,197 +494,191 @@ except ImportError:
             if char != ".":
                 return pos, key
             pos += 1
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
-            pos, key_part = __tomli__parse_key_part(src, pos)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
+            pos, key_part = v_tomli_parse_key_part(src, pos)
             key += (key_part,)
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
 
-    def __tomli__parse_key_part(src: str, pos: Pos) -> tuple[Pos, str]:
+    def v_tomli_parse_key_part(src: str, pos: v_tomli_Pos) -> tuple[v_tomli_Pos, str]:
         try:
             char: str | None = src[pos]
         except IndexError:
             char = None
-        if char in __tomli__BARE_KEY_CHARS:
+        if char in v_tomli_BARE_KEY_CHARS:
             start_pos = pos
-            pos = __tomli__skip_chars(src, pos, __tomli__BARE_KEY_CHARS)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_BARE_KEY_CHARS)
             return pos, src[start_pos:pos]
         if char == "'":
-            return __tomli__parse_literal_str(src, pos)
+            return v_tomli_parse_literal_str(src, pos)
         if char == '"':
-            return __tomli__parse_one_line_basic_str(src, pos)
-        raise __tomli__suffixed_err(
-            src, pos, "Invalid initial character for a key part"
-        )
+            return v_tomli_parse_one_line_basic_str(src, pos)
+        raise v_tomli_suffixed_err(src, pos, "Invalid initial character for a key part")
 
-    def __tomli__parse_one_line_basic_str(src: str, pos: Pos) -> tuple[Pos, str]:
+    def v_tomli_parse_one_line_basic_str(
+        src: str, pos: v_tomli_Pos
+    ) -> tuple[v_tomli_Pos, str]:
         pos += 1
-        return __tomli__parse_basic_str(src, pos, multiline=False)
+        return v_tomli_parse_basic_str(src, pos, multiline=False)
 
-    def __tomli__parse_array(
-        src: str, pos: Pos, parse_float: ParseFloat
-    ) -> tuple[Pos, list]:
+    def v_tomli_parse_array(
+        src: str, pos: v_tomli_Pos, parse_float: v_tomli_ParseFloat
+    ) -> tuple[v_tomli_Pos, list]:
         pos += 1
         array: list = []
-        pos = __tomli__skip_comments_and_array_ws(src, pos)
+        pos = v_tomli_skip_comments_and_array_ws(src, pos)
         if src.startswith("]", pos):
             return pos + 1, array
         while True:
-            pos, val = __tomli__parse_value(src, pos, parse_float)
+            pos, val = v_tomli_parse_value(src, pos, parse_float)
             array.append(val)
-            pos = __tomli__skip_comments_and_array_ws(src, pos)
+            pos = v_tomli_skip_comments_and_array_ws(src, pos)
             c = src[pos : pos + 1]
             if c == "]":
                 return pos + 1, array
             if c != ",":
-                raise __tomli__suffixed_err(src, pos, "Unclosed array")
+                raise v_tomli_suffixed_err(src, pos, "Unclosed array")
             pos += 1
-            pos = __tomli__skip_comments_and_array_ws(src, pos)
+            pos = v_tomli_skip_comments_and_array_ws(src, pos)
             if src.startswith("]", pos):
                 return pos + 1, array
 
-    def __tomli__parse_inline_table(
-        src: str, pos: Pos, parse_float: ParseFloat
-    ) -> tuple[Pos, dict]:
+    def v_tomli_parse_inline_table(
+        src: str, pos: v_tomli_Pos, parse_float: v_tomli_ParseFloat
+    ) -> tuple[v_tomli_Pos, dict]:
         pos += 1
-        nested_dict = NestedDict()
-        flags = Flags()
-        pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+        nested_dict = v_tomli_NestedDict()
+        flags = v_tomli_Flags()
+        pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
         if src.startswith("}", pos):
             return pos + 1, nested_dict.dict
         while True:
-            pos, key, value = __tomli__parse_key_value_pair(src, pos, parse_float)
+            pos, key, value = v_tomli_parse_key_value_pair(src, pos, parse_float)
             key_parent, key_stem = key[:-1], key[-1]
-            if flags.is_(key, Flags.FROZEN):
-                raise __tomli__suffixed_err(
+            if flags.is_(key, v_tomli_Flags.FROZEN):
+                raise v_tomli_suffixed_err(
                     src, pos, f"Cannot mutate immutable namespace {key}"
                 )
             try:
                 nest = nested_dict.get_or_create_nest(key_parent, access_lists=False)
             except KeyError:
-                raise __tomli__suffixed_err(
+                raise v_tomli_suffixed_err(
                     src, pos, "Cannot overwrite a value"
                 ) from None
             if key_stem in nest:
-                raise __tomli__suffixed_err(
+                raise v_tomli_suffixed_err(
                     src, pos, f"Duplicate inline table key {key_stem!r}"
                 )
             nest[key_stem] = value
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
             c = src[pos : pos + 1]
             if c == "}":
                 return pos + 1, nested_dict.dict
             if c != ",":
-                raise __tomli__suffixed_err(src, pos, "Unclosed inline table")
+                raise v_tomli_suffixed_err(src, pos, "Unclosed inline table")
             if isinstance(value, (dict, list)):
-                flags.set(key, Flags.FROZEN, recursive=True)
+                flags.set(key, v_tomli_Flags.FROZEN, recursive=True)
             pos += 1
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
 
-    def __tomli__parse_basic_str_escape(
-        src: str, pos: Pos, *, multiline: bool = False
-    ) -> tuple[Pos, str]:
+    def v_tomli_parse_basic_str_escape(
+        src: str, pos: v_tomli_Pos, *, multiline: bool = False
+    ) -> tuple[v_tomli_Pos, str]:
         escape_id = src[pos : pos + 2]
         pos += 2
         if multiline and escape_id in {"\\ ", "\\\t", "\\\n"}:
-            # Skip whitespace until next non-whitespace character or end of
-            # the doc. Error if non-whitespace is found before newline.
             if escape_id != "\\\n":
-                pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS)
+                pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS)
                 try:
                     char = src[pos]
                 except IndexError:
                     return pos, ""
                 if char != "\n":
-                    raise __tomli__suffixed_err(src, pos, "Unescaped '\\' in a string")
+                    raise v_tomli_suffixed_err(src, pos, "Unescaped '\\' in a string")
                 pos += 1
-            pos = __tomli__skip_chars(src, pos, __tomli__TOML_WS_AND_NEWLINE)
+            pos = v_tomli_skip_chars(src, pos, v_tomli_TOML_WS_AND_NEWLINE)
             return pos, ""
         if escape_id == "\\u":
-            return __tomli__parse_hex_char(src, pos, 4)
+            return v_tomli_parse_hex_char(src, pos, 4)
         if escape_id == "\\U":
-            return __tomli__parse_hex_char(src, pos, 8)
+            return v_tomli_parse_hex_char(src, pos, 8)
         try:
-            return pos, __tomli__BASIC_STR_ESCAPE_REPLACEMENTS[escape_id]
+            return pos, v_tomli_BASIC_STR_ESCAPE_REPLACEMENTS[escape_id]
         except KeyError:
-            raise __tomli__suffixed_err(
-                src, pos, "Unescaped '\\' in a string"
-            ) from None
+            raise v_tomli_suffixed_err(src, pos, "Unescaped '\\' in a string") from None
 
-    def __tomli__parse_basic_str_escape_multiline(
-        src: str, pos: Pos
-    ) -> tuple[Pos, str]:
-        return __tomli__parse_basic_str_escape(src, pos, multiline=True)
+    def v_tomli_parse_basic_str_escape_multiline(
+        src: str, pos: v_tomli_Pos
+    ) -> tuple[v_tomli_Pos, str]:
+        return v_tomli_parse_basic_str_escape(src, pos, multiline=True)
 
-    def __tomli__parse_hex_char(src: str, pos: Pos, hex_len: int) -> tuple[Pos, str]:
+    def v_tomli_parse_hex_char(
+        src: str, pos: v_tomli_Pos, hex_len: int
+    ) -> tuple[v_tomli_Pos, str]:
         hex_str = src[pos : pos + hex_len]
-        if len(hex_str) != hex_len or not __tomli__HEXDIGIT_CHARS.issuperset(hex_str):
-            raise __tomli__suffixed_err(src, pos, "Invalid hex value")
+        if len(hex_str) != hex_len or not v_tomli_HEXDIGIT_CHARS.issuperset(hex_str):
+            raise v_tomli_suffixed_err(src, pos, "Invalid hex value")
         pos += hex_len
         hex_int = int(hex_str, 16)
-        if not __tomli__is_unicode_scalar_value(hex_int):
-            raise __tomli__suffixed_err(
+        if not v_tomli_is_unicode_scalar_value(hex_int):
+            raise v_tomli_suffixed_err(
                 src, pos, "Escaped character is not a Unicode scalar value"
             )
         return pos, chr(hex_int)
 
-    def __tomli__parse_literal_str(src: str, pos: Pos) -> tuple[Pos, str]:
-        pos += 1  # Skip starting apostrophe
+    def v_tomli_parse_literal_str(
+        src: str, pos: v_tomli_Pos
+    ) -> tuple[v_tomli_Pos, str]:
+        pos += 1
         start_pos = pos
-        pos = __tomli__skip_until(
-            src,
-            pos,
-            "'",
-            error_on=__tomli__ILLEGAL_LITERAL_STR_CHARS,
-            error_on_eof=True,
+        pos = v_tomli_skip_until(
+            src, pos, "'", error_on=v_tomli_ILLEGAL_LITERAL_STR_CHARS, error_on_eof=True
         )
-        return pos + 1, src[start_pos:pos]  # Skip ending apostrophe
+        return pos + 1, src[start_pos:pos]
 
-    def __tomli__parse_multiline_str(
-        src: str, pos: Pos, *, literal: bool
-    ) -> tuple[Pos, str]:
+    def v_tomli_parse_multiline_str(
+        src: str, pos: v_tomli_Pos, *, literal: bool
+    ) -> tuple[v_tomli_Pos, str]:
         pos += 3
         if src.startswith("\n", pos):
             pos += 1
         if literal:
             delim = "'"
-            end_pos = __tomli__skip_until(
+            end_pos = v_tomli_skip_until(
                 src,
                 pos,
                 "'''",
-                error_on=__tomli__ILLEGAL_MULTILINE_LITERAL_STR_CHARS,
+                error_on=v_tomli_ILLEGAL_MULTILINE_LITERAL_STR_CHARS,
                 error_on_eof=True,
             )
             result = src[pos:end_pos]
             pos = end_pos + 3
         else:
             delim = '"'
-            pos, result = __tomli__parse_basic_str(src, pos, multiline=True)
-        # Add at maximum two extra apostrophes/quotes if the end sequence
-        # is 4 or 5 chars long instead of just 3.
+            pos, result = v_tomli_parse_basic_str(src, pos, multiline=True)
         if not src.startswith(delim, pos):
             return pos, result
         pos += 1
         if not src.startswith(delim, pos):
             return pos, result + delim
         pos += 1
-        return pos, result + (delim * 2)
+        return pos, result + delim * 2
 
-    def __tomli__parse_basic_str(
-        src: str, pos: Pos, *, multiline: bool
-    ) -> tuple[Pos, str]:
+    def v_tomli_parse_basic_str(
+        src: str, pos: v_tomli_Pos, *, multiline: bool
+    ) -> tuple[v_tomli_Pos, str]:
         if multiline:
-            error_on = __tomli__ILLEGAL_MULTILINE_BASIC_STR_CHARS
-            parse_escapes = __tomli__parse_basic_str_escape_multiline
+            error_on = v_tomli_ILLEGAL_MULTILINE_BASIC_STR_CHARS
+            parse_escapes = v_tomli_parse_basic_str_escape_multiline
         else:
-            error_on = __tomli__ILLEGAL_BASIC_STR_CHARS
-            parse_escapes = __tomli__parse_basic_str_escape
+            error_on = v_tomli_ILLEGAL_BASIC_STR_CHARS
+            parse_escapes = v_tomli_parse_basic_str_escape
         result = ""
         start_pos = pos
         while True:
             try:
                 char = src[pos]
             except IndexError:
-                raise __tomli__suffixed_err(src, pos, "Unterminated string") from None
+                raise v_tomli_suffixed_err(src, pos, "Unterminated string") from None
             if char == '"':
                 if not multiline:
                     return pos + 1, result + src[start_pos:pos]
@@ -728,73 +693,61 @@ except ImportError:
                 start_pos = pos
                 continue
             if char in error_on:
-                raise __tomli__suffixed_err(src, pos, f"Illegal character {char!r}")
+                raise v_tomli_suffixed_err(src, pos, f"Illegal character {char!r}")
             pos += 1
 
-    def __tomli__parse_value(  # noqa: C901
-        src: str, pos: Pos, parse_float: ParseFloat
-    ) -> tuple[Pos, Any]:
+    def v_tomli_parse_value(
+        src: str, pos: v_tomli_Pos, parse_float: v_tomli_ParseFloat
+    ) -> tuple[v_tomli_Pos, Any]:
         try:
             char: str | None = src[pos]
         except IndexError:
             char = None
-        # IMPORTANT: order conditions based on speed of checking and likelihood
-        # Basic strings
         if char == '"':
             if src.startswith('"""', pos):
-                return __tomli__parse_multiline_str(src, pos, literal=False)
-            return __tomli__parse_one_line_basic_str(src, pos)
-        # Literal strings
+                return v_tomli_parse_multiline_str(src, pos, literal=False)
+            return v_tomli_parse_one_line_basic_str(src, pos)
         if char == "'":
             if src.startswith("'''", pos):
-                return __tomli__parse_multiline_str(src, pos, literal=True)
-            return __tomli__parse_literal_str(src, pos)
-        # Booleans
+                return v_tomli_parse_multiline_str(src, pos, literal=True)
+            return v_tomli_parse_literal_str(src, pos)
         if char == "t":
             if src.startswith("true", pos):
                 return pos + 4, True
         if char == "f":
             if src.startswith("false", pos):
                 return pos + 5, False
-        # Arrays
         if char == "[":
-            return __tomli__parse_array(src, pos, parse_float)
-        # Inline tables
+            return v_tomli_parse_array(src, pos, parse_float)
         if char == "{":
-            return __tomli__parse_inline_table(src, pos, parse_float)
-        # Dates and times
-        datetime_match = __tomli__RE_DATETIME.match(src, pos)
+            return v_tomli_parse_inline_table(src, pos, parse_float)
+        datetime_match = v_tomli_RE_DATETIME.match(src, pos)
         if datetime_match:
             try:
-                datetime_obj = __tomli__match_to_datetime(datetime_match)
+                datetime_obj = v_tomli_match_to_datetime(datetime_match)
             except ValueError as e:
-                raise __tomli__suffixed_err(src, pos, "Invalid date or datetime") from e
+                raise v_tomli_suffixed_err(src, pos, "Invalid date or datetime") from e
             return datetime_match.end(), datetime_obj
-        localtime_match = __tomli__RE_LOCALTIME.match(src, pos)
+        localtime_match = v_tomli_RE_LOCALTIME.match(src, pos)
         if localtime_match:
-            return localtime_match.end(), __tomli__match_to_localtime(localtime_match)
-        # Integers and "normal" floats.
-        # The regex will greedily match any type starting with a decimal
-        # char, so needs to be located after handling of dates and times.
-        number_match = __tomli__RE_NUMBER.match(src, pos)
+            return localtime_match.end(), v_tomli_match_to_localtime(localtime_match)
+        number_match = v_tomli_RE_NUMBER.match(src, pos)
         if number_match:
-            return number_match.end(), __tomli__match_to_number(
+            return number_match.end(), v_tomli_match_to_number(
                 number_match, parse_float
             )
-        # Special floats
         first_three = src[pos : pos + 3]
         if first_three in {"inf", "nan"}:
             return pos + 3, parse_float(first_three)
         first_four = src[pos : pos + 4]
         if first_four in {"-inf", "+inf", "-nan", "+nan"}:
             return pos + 4, parse_float(first_four)
-        raise __tomli__suffixed_err(src, pos, "Invalid value")
+        raise v_tomli_suffixed_err(src, pos, "Invalid value")
 
-    def __tomli__suffixed_err(src: str, pos: Pos, msg: str) -> TOMLDecodeError:
-        """Return a `TOMLDecodeError` where error message is suffixed with
-        coordinates in source."""
-
-        def coord_repr(src: str, pos: Pos) -> str:
+    def v_tomli_suffixed_err(
+        src: str, pos: v_tomli_Pos, msg: str
+    ) -> v_tomli_TOMLDecodeError:
+        def coord_repr(src: str, pos: v_tomli_Pos) -> str:
             if pos >= len(src):
                 return "end of document"
             line = src.count("\n", 0, pos) + 1
@@ -804,19 +757,14 @@ except ImportError:
                 column = pos - src.rindex("\n", 0, pos)
             return f"line {line}, column {column}"
 
-        return TOMLDecodeError(f"{msg} (at {coord_repr(src, pos)})")
+        return v_tomli_TOMLDecodeError(f"{msg} (at {coord_repr(src, pos)})")
 
-    def __tomli__is_unicode_scalar_value(codepoint: int) -> bool:
-        return (0 <= codepoint <= 55295) or (57344 <= codepoint <= 1114111)
+    def v_tomli_is_unicode_scalar_value(codepoint: int) -> bool:
+        return 0 <= codepoint <= 55295 or 57344 <= codepoint <= 1114111
 
-    def __tomli__make_safe_parse_float(parse_float: ParseFloat) -> ParseFloat:
-        """A decorator to make `parse_float` safe.
-        `parse_float` must not return dicts or lists, because these types
-        would be mixed with parsed TOML tables and arrays, thus confusing
-        the parser. The returned decorated callable raises `ValueError`
-        instead of returning illegal types.
-        """
-        # The default `float` callable never returns illegal types. Optimize it.
+    def v_tomli_make_safe_parse_float(
+        parse_float: v_tomli_ParseFloat,
+    ) -> v_tomli_ParseFloat:
         if parse_float is float:
             return float
 
@@ -828,9 +776,927 @@ except ImportError:
 
         return safe_parse_float
 
-    toml_loads = __tomli__loads
+    toml_loads = v_tomli_loads
 
-##### END VENDORED TOMLI #####
+#### END VENDORED TOMLI ####
+
+
+#### START VENDORED PACKAGING ####
+
+# MODIFIED FROM https://github.com/pypa/packaging
+# see repo for original licenses
+# This software is made available under the terms of *either* of the licenses
+# found in LICENSE.APACHE or LICENSE.BSD. Contributions to this software is made
+# under the terms of *both* these licenses.
+
+import abc  # noqa
+import itertools  # noqa
+import re  # noqa
+from typing import (  # noqa
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    SupportsInt,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+
+class v_packaging_InfinityType:
+    def __repr__(self) -> str:
+        return "v_packaging_Infinity"
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
+    def __lt__(self, other: object) -> bool:
+        return False
+
+    def __le__(self, other: object) -> bool:
+        return False
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__)
+
+    def __gt__(self, other: object) -> bool:
+        return True
+
+    def __ge__(self, other: object) -> bool:
+        return True
+
+    def __neg__(self: object) -> "v_packaging_NegativeInfinityType":
+        return v_packaging_NegativeInfinity
+
+
+v_packaging_Infinity = v_packaging_InfinityType()
+
+
+class v_packaging_NegativeInfinityType:
+    def __repr__(self) -> str:
+        return "-Infinity"
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
+    def __lt__(self, other: object) -> bool:
+        return True
+
+    def __le__(self, other: object) -> bool:
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__)
+
+    def __gt__(self, other: object) -> bool:
+        return False
+
+    def __ge__(self, other: object) -> bool:
+        return False
+
+    def __neg__(self: object) -> v_packaging_InfinityType:
+        return v_packaging_Infinity
+
+
+v_packaging_NegativeInfinity = v_packaging_NegativeInfinityType()
+v_packaging_LocalType = Tuple[Union[int, str], ...]
+v_packaging_CmpPrePostDevType = Union[
+    v_packaging_InfinityType, v_packaging_NegativeInfinityType, Tuple[str, int]
+]
+v_packaging_CmpLocalType = Union[
+    v_packaging_NegativeInfinityType,
+    Tuple[
+        Union[
+            Tuple[int, str], Tuple[v_packaging_NegativeInfinityType, Union[int, str]]
+        ],
+        ...,
+    ],
+]
+v_packaging_CmpKey = Tuple[
+    int,
+    Tuple[int, ...],
+    v_packaging_CmpPrePostDevType,
+    v_packaging_CmpPrePostDevType,
+    v_packaging_CmpPrePostDevType,
+    v_packaging_CmpLocalType,
+]
+v_packaging_VersionComparisonMethod = Callable[
+    [v_packaging_CmpKey, v_packaging_CmpKey], bool
+]
+
+
+class v_packaging__Version(NamedTuple):
+    epoch: int
+    release: Tuple[int, ...]
+    dev: Optional[Tuple[str, int]]
+    pre: Optional[Tuple[str, int]]
+    post: Optional[Tuple[str, int]]
+    local: Optional[v_packaging_LocalType]
+
+
+def v_packaging_parse(version: str) -> "v_packaging_Version":
+    return v_packaging_Version(version)
+
+
+class v_packaging_InvalidVersion(ValueError):
+    pass
+
+
+class v_packaging__BaseVersion:
+    _key: Tuple[Any, ...]
+
+    def __hash__(self) -> int:
+        return hash(self._key)
+
+    def __lt__(self, other: "v_packaging__BaseVersion") -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key < other._key
+
+    def __le__(self, other: "v_packaging__BaseVersion") -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key <= other._key
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key == other._key
+
+    def __ge__(self, other: "v_packaging__BaseVersion") -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key >= other._key
+
+    def __gt__(self, other: "v_packaging__BaseVersion") -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key > other._key
+
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, v_packaging__BaseVersion):
+            return NotImplemented
+        return self._key != other._key
+
+
+v_packaging__VERSION_PATTERN = """
+    v?
+    (?:
+        (?:(?P<epoch>[0-9]+)!)?                           # epoch
+        (?P<release>[0-9]+(?:\\.[0-9]+)*)                  # release segment
+        (?P<pre>                                          # pre-release
+            [-_\\.]?
+            (?P<pre_l>alpha|a|beta|b|preview|pre|c|rc)
+            [-_\\.]?
+            (?P<pre_n>[0-9]+)?
+        )?
+        (?P<post>                                         # post release
+            (?:-(?P<post_n1>[0-9]+))
+            |
+            (?:
+                [-_\\.]?
+                (?P<post_l>post|rev|r)
+                [-_\\.]?
+                (?P<post_n2>[0-9]+)?
+            )
+        )?
+        (?P<dev>                                          # dev release
+            [-_\\.]?
+            (?P<dev_l>dev)
+            [-_\\.]?
+            (?P<dev_n>[0-9]+)?
+        )?
+    )
+    (?:\\+(?P<local>[a-z0-9]+(?:[-_\\.][a-z0-9]+)*))?       # local version
+"""
+v_packaging_VERSION_PATTERN = v_packaging__VERSION_PATTERN
+
+
+class v_packaging_Version(v_packaging__BaseVersion):
+    _regex = re.compile(
+        "^\\s*" + v_packaging_VERSION_PATTERN + "\\s*$", re.VERBOSE | re.IGNORECASE
+    )
+    _key: v_packaging_CmpKey
+
+    def __init__(self, version: str) -> None:
+        match = self._regex.search(version)
+        if not match:
+            raise v_packaging_InvalidVersion(f"Invalid version: '{version}'")
+        self._version = v_packaging__Version(
+            epoch=int(match.group("epoch")) if match.group("epoch") else 0,
+            release=tuple(int(i) for i in match.group("release").split(".")),
+            pre=v_packaging__parse_letter_version(
+                match.group("pre_l"), match.group("pre_n")
+            ),
+            post=v_packaging__parse_letter_version(
+                match.group("post_l"), match.group("post_n1") or match.group("post_n2")
+            ),
+            dev=v_packaging__parse_letter_version(
+                match.group("dev_l"), match.group("dev_n")
+            ),
+            local=v_packaging__parse_local_version(match.group("local")),
+        )
+        self._key = v_packaging__cmpkey(
+            self._version.epoch,
+            self._version.release,
+            self._version.pre,
+            self._version.post,
+            self._version.dev,
+            self._version.local,
+        )
+
+    def __repr__(self) -> str:
+        return f"<Version('{self}')>"
+
+    def __str__(self) -> str:
+        parts = []
+        if self.epoch != 0:
+            parts.append(f"{self.epoch}!")
+        parts.append(".".join(str(x) for x in self.release))
+        if self.pre is not None:
+            parts.append("".join(str(x) for x in self.pre))
+        if self.post is not None:
+            parts.append(f".post{self.post}")
+        if self.dev is not None:
+            parts.append(f".dev{self.dev}")
+        if self.local is not None:
+            parts.append(f"+{self.local}")
+        return "".join(parts)
+
+    @property
+    def epoch(self) -> int:
+        return self._version.epoch
+
+    @property
+    def release(self) -> Tuple[int, ...]:
+        return self._version.release
+
+    @property
+    def pre(self) -> Optional[Tuple[str, int]]:
+        return self._version.pre
+
+    @property
+    def post(self) -> Optional[int]:
+        return self._version.post[1] if self._version.post else None
+
+    @property
+    def dev(self) -> Optional[int]:
+        return self._version.dev[1] if self._version.dev else None
+
+    @property
+    def local(self) -> Optional[str]:
+        if self._version.local:
+            return ".".join(str(x) for x in self._version.local)
+        else:
+            return None
+
+    @property
+    def public(self) -> str:
+        return str(self).split("+", 1)[0]
+
+    @property
+    def base_version(self) -> str:
+        parts = []
+        if self.epoch != 0:
+            parts.append(f"{self.epoch}!")
+        parts.append(".".join(str(x) for x in self.release))
+        return "".join(parts)
+
+    @property
+    def is_prerelease(self) -> bool:
+        return self.dev is not None or self.pre is not None
+
+    @property
+    def is_postrelease(self) -> bool:
+        return self.post is not None
+
+    @property
+    def is_devrelease(self) -> bool:
+        return self.dev is not None
+
+    @property
+    def major(self) -> int:
+        return self.release[0] if len(self.release) >= 1 else 0
+
+    @property
+    def minor(self) -> int:
+        return self.release[1] if len(self.release) >= 2 else 0
+
+    @property
+    def micro(self) -> int:
+        return self.release[2] if len(self.release) >= 3 else 0
+
+
+def v_packaging__parse_letter_version(
+    letter: Optional[str], number: Union[str, bytes, SupportsInt, None]
+) -> Optional[Tuple[str, int]]:
+    if letter:
+        if number is None:
+            number = 0
+        letter = letter.lower()
+        if letter == "alpha":
+            letter = "a"
+        elif letter == "beta":
+            letter = "b"
+        elif letter in ["c", "pre", "preview"]:
+            letter = "rc"
+        elif letter in ["rev", "r"]:
+            letter = "post"
+        return letter, int(number)
+    if not letter and number:
+        letter = "post"
+        return letter, int(number)
+    return None
+
+
+v_packaging__local_version_separators = re.compile("[\\._-]")
+
+
+def v_packaging__parse_local_version(
+    local: Optional[str],
+) -> Optional[v_packaging_LocalType]:
+    if local is not None:
+        return tuple(
+            part.lower() if not part.isdigit() else int(part)
+            for part in v_packaging__local_version_separators.split(local)
+        )
+    return None
+
+
+def v_packaging__cmpkey(
+    epoch: int,
+    release: Tuple[int, ...],
+    pre: Optional[Tuple[str, int]],
+    post: Optional[Tuple[str, int]],
+    dev: Optional[Tuple[str, int]],
+    local: Optional[v_packaging_LocalType],
+) -> v_packaging_CmpKey:
+    _release = tuple(
+        reversed(list(itertools.dropwhile(lambda x: x == 0, reversed(release))))
+    )
+    if pre is None and post is None and dev is not None:
+        _pre: v_packaging_CmpPrePostDevType = v_packaging_NegativeInfinity
+    elif pre is None:
+        _pre = v_packaging_Infinity
+    else:
+        _pre = pre
+    if post is None:
+        _post: v_packaging_CmpPrePostDevType = v_packaging_NegativeInfinity
+    else:
+        _post = post
+    if dev is None:
+        _dev: v_packaging_CmpPrePostDevType = v_packaging_Infinity
+    else:
+        _dev = dev
+    if local is None:
+        _local: v_packaging_CmpLocalType = v_packaging_NegativeInfinity
+    else:
+        _local = tuple(
+            (i, "") if isinstance(i, int) else (v_packaging_NegativeInfinity, i)
+            for i in local
+        )
+    return epoch, _release, _pre, _post, _dev, _local
+
+
+def v_packaging_canonicalize_version(
+    version: Union[v_packaging_Version, str], *, strip_trailing_zero: bool = True
+) -> str:
+    if isinstance(version, str):
+        try:
+            v_packaging_parsed = v_packaging_Version(version)
+        except v_packaging_InvalidVersion:
+            return version
+    else:
+        v_packaging_parsed = version
+    parts = []
+    if v_packaging_parsed.epoch != 0:
+        parts.append(f"{v_packaging_parsed.epoch}!")
+    release_segment = ".".join(str(x) for x in v_packaging_parsed.release)
+    if strip_trailing_zero:
+        release_segment = re.sub("(\\.0)+$", "", release_segment)
+    parts.append(release_segment)
+    if v_packaging_parsed.pre is not None:
+        parts.append("".join(str(x) for x in v_packaging_parsed.pre))
+    if v_packaging_parsed.post is not None:
+        parts.append(f".post{v_packaging_parsed.post}")
+    if v_packaging_parsed.dev is not None:
+        parts.append(f".dev{v_packaging_parsed.dev}")
+    if v_packaging_parsed.local is not None:
+        parts.append(f"+{v_packaging_parsed.local}")
+    return "".join(parts)
+
+
+v_packaging_UnparsedVersion = Union[v_packaging_Version, str]
+v_packaging_UnparsedVersionVar = TypeVar(
+    "v_packaging_UnparsedVersionVar", bound=v_packaging_UnparsedVersion
+)
+v_packaging_CallableOperator = Callable[[v_packaging_Version, str], bool]
+
+
+def v_packaging__coerce_version(
+    version: v_packaging_UnparsedVersion,
+) -> v_packaging_Version:
+    if not isinstance(version, v_packaging_Version):
+        version = v_packaging_Version(version)
+    return version
+
+
+class v_packaging_InvalidSpecifier(ValueError):
+    pass
+
+
+class v_packaging_BaseSpecifier(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        pass
+
+    @abc.abstractmethod
+    def __hash__(self) -> int:
+        pass
+
+    @abc.abstractmethod
+    def __eq__(self, other: object) -> bool:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def prereleases(self) -> Optional[bool]:
+        pass
+
+    @prereleases.setter
+    def prereleases(self, value: bool) -> None:
+        pass
+
+    @abc.abstractmethod
+    def contains(self, item: str, prereleases: Optional[bool] = None) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def filter(
+        self,
+        iterable: Iterable[v_packaging_UnparsedVersionVar],
+        prereleases: Optional[bool] = None,
+    ) -> Iterator[v_packaging_UnparsedVersionVar]:
+        pass
+
+
+class v_packaging_Specifier(v_packaging_BaseSpecifier):
+    _operator_regex_str = """
+        (?P<operator>(~=|==|!=|<=|>=|<|>|===))
+        """
+    _version_regex_str = """
+        (?P<version>
+            (?:
+                # The identity operators allow for an escape hatch that will
+                # do an exact string match of the version you wish to install.
+                # This will not be v_packaging_parsed by PEP 440 and we cannot determine
+                # any semantic meaning from it. This operator is discouraged
+                # but included entirely as an escape hatch.
+                (?<====)  # Only match for the identity operator
+                \\s*
+                [^\\s;)]*  # The arbitrary version can be just about anything,
+                          # we match everything except for whitespace, a
+                          # semi-colon for marker support, and a closing paren
+                          # since versions can be enclosed in them.
+            )
+            |
+            (?:
+                # The (non)equality operators allow for wild card and local
+                # versions to be specified so we have to define these two
+                # operators separately to enable that.
+                (?<===|!=)            # Only match for equals and not equals
+                \\s*
+                v?
+                (?:[0-9]+!)?          # epoch
+                [0-9]+(?:\\.[0-9]+)*   # release
+                # You cannot use a wild card and a pre-release, post-release, a dev or
+                # local version together so group them with a | and make them optional.
+                (?:
+                    \\.\\*  # Wild card syntax of .*
+                    |
+                    (?:                                  # pre release
+                        [-_\\.]?
+                        (alpha|beta|preview|pre|a|b|c|rc)
+                        [-_\\.]?
+                        [0-9]*
+                    )?
+                    (?:                                  # post release
+                        (?:-[0-9]+)|(?:[-_\\.]?(post|rev|r)[-_\\.]?[0-9]*)
+                    )?
+                    (?:[-_\\.]?dev[-_\\.]?[0-9]*)?         # dev release
+                    (?:\\+[a-z0-9]+(?:[-_\\.][a-z0-9]+)*)? # local
+                )?
+            )
+            |
+            (?:
+                # The compatible operator requires at least two digits in the
+                # release segment.
+                (?<=~=)               # Only match for the compatible operator
+                \\s*
+                v?
+                (?:[0-9]+!)?          # epoch
+                [0-9]+(?:\\.[0-9]+)+   # release  (We have a + instead of a *)
+                (?:                   # pre release
+                    [-_\\.]?
+                    (alpha|beta|preview|pre|a|b|c|rc)
+                    [-_\\.]?
+                    [0-9]*
+                )?
+                (?:                                   # post release
+                    (?:-[0-9]+)|(?:[-_\\.]?(post|rev|r)[-_\\.]?[0-9]*)
+                )?
+                (?:[-_\\.]?dev[-_\\.]?[0-9]*)?          # dev release
+            )
+            |
+            (?:
+                # All other operators only allow a sub set of what the
+                # (non)equality operators do. Specifically they do not allow
+                # local versions to be specified nor do they allow the prefix
+                # matching wild cards.
+                (?<!==|!=|~=)         # We have special cases for these
+                                      # operators so we want to make sure they
+                                      # don't match here.
+                \\s*
+                v?
+                (?:[0-9]+!)?          # epoch
+                [0-9]+(?:\\.[0-9]+)*   # release
+                (?:                   # pre release
+                    [-_\\.]?
+                    (alpha|beta|preview|pre|a|b|c|rc)
+                    [-_\\.]?
+                    [0-9]*
+                )?
+                (?:                                   # post release
+                    (?:-[0-9]+)|(?:[-_\\.]?(post|rev|r)[-_\\.]?[0-9]*)
+                )?
+                (?:[-_\\.]?dev[-_\\.]?[0-9]*)?          # dev release
+            )
+        )
+        """
+    _regex = re.compile(
+        "^\\s*" + _operator_regex_str + _version_regex_str + "\\s*$",
+        re.VERBOSE | re.IGNORECASE,
+    )
+    _operators = {
+        "~=": "compatible",
+        "==": "equal",
+        "!=": "not_equal",
+        "<=": "less_than_equal",
+        ">=": "greater_than_equal",
+        "<": "less_than",
+        ">": "greater_than",
+        "===": "arbitrary",
+    }
+
+    def __init__(self, spec: str = "", prereleases: Optional[bool] = None) -> None:
+        match = self._regex.search(spec)
+        if not match:
+            raise v_packaging_InvalidSpecifier(f"Invalid specifier: '{spec}'")
+        self._spec: Tuple[str, str] = (
+            match.group("operator").strip(),
+            match.group("version").strip(),
+        )
+        self._prereleases = prereleases
+
+    @property
+    def prereleases(self) -> bool:
+        if self._prereleases is not None:
+            return self._prereleases
+        operator, version = self._spec
+        if operator in ["==", ">=", "<=", "~=", "==="]:
+            if operator == "==" and version.endswith(".*"):
+                version = version[:-2]
+            if v_packaging_Version(version).is_prerelease:
+                return True
+        return False
+
+    @prereleases.setter
+    def prereleases(self, value: bool) -> None:
+        self._prereleases = value
+
+    @property
+    def operator(self) -> str:
+        return self._spec[0]
+
+    @property
+    def version(self) -> str:
+        return self._spec[1]
+
+    def __repr__(self) -> str:
+        pre = (
+            f", prereleases={self.prereleases!r}"
+            if self._prereleases is not None
+            else ""
+        )
+        return f"<{self.__class__.__name__}({str(self)!r}{pre})>"
+
+    def __str__(self) -> str:
+        return "{}{}".format(*self._spec)
+
+    @property
+    def _canonical_spec(self) -> Tuple[str, str]:
+        canonical_version = v_packaging_canonicalize_version(
+            self._spec[1], strip_trailing_zero=self._spec[0] != "~="
+        )
+        return self._spec[0], canonical_version
+
+    def __hash__(self) -> int:
+        return hash(self._canonical_spec)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            try:
+                other = self.__class__(str(other))
+            except v_packaging_InvalidSpecifier:
+                return NotImplemented
+        elif not isinstance(other, self.__class__):
+            return NotImplemented
+        return self._canonical_spec == other._canonical_spec
+
+    def _get_operator(self, op: str) -> v_packaging_CallableOperator:
+        operator_callable: v_packaging_CallableOperator = getattr(
+            self, f"_compare_{self._operators[op]}"
+        )
+        return operator_callable
+
+    def _compare_compatible(self, prospective: v_packaging_Version, spec: str) -> bool:
+        prefix = ".".join(
+            list(
+                itertools.takewhile(
+                    v_packaging__is_not_suffix, v_packaging__version_split(spec)
+                )
+            )[:-1]
+        )
+        prefix += ".*"
+        return self._get_operator(">=")(prospective, spec) and self._get_operator("==")(
+            prospective, prefix
+        )
+
+    def _compare_equal(self, prospective: v_packaging_Version, spec: str) -> bool:
+        if spec.endswith(".*"):
+            normalized_prospective = v_packaging_canonicalize_version(
+                prospective.public, strip_trailing_zero=False
+            )
+            normalized_spec = v_packaging_canonicalize_version(
+                spec[:-2], strip_trailing_zero=False
+            )
+            split_spec = v_packaging__version_split(normalized_spec)
+            split_prospective = v_packaging__version_split(normalized_prospective)
+            padded_prospective, _ = v_packaging__pad_version(
+                split_prospective, split_spec
+            )
+            shortened_prospective = padded_prospective[: len(split_spec)]
+            return shortened_prospective == split_spec
+        else:
+            spec_version = v_packaging_Version(spec)
+            if not spec_version.local:
+                prospective = v_packaging_Version(prospective.public)
+            return prospective == spec_version
+
+    def _compare_not_equal(self, prospective: v_packaging_Version, spec: str) -> bool:
+        return not self._compare_equal(prospective, spec)
+
+    def _compare_less_than_equal(
+        self, prospective: v_packaging_Version, spec: str
+    ) -> bool:
+        return v_packaging_Version(prospective.public) <= v_packaging_Version(spec)
+
+    def _compare_greater_than_equal(
+        self, prospective: v_packaging_Version, spec: str
+    ) -> bool:
+        return v_packaging_Version(prospective.public) >= v_packaging_Version(spec)
+
+    def _compare_less_than(
+        self, prospective: v_packaging_Version, spec_str: str
+    ) -> bool:
+        spec = v_packaging_Version(spec_str)
+        if not prospective < spec:
+            return False
+        if not spec.is_prerelease and prospective.is_prerelease:
+            if v_packaging_Version(prospective.base_version) == v_packaging_Version(
+                spec.base_version
+            ):
+                return False
+        return True
+
+    def _compare_greater_than(
+        self, prospective: v_packaging_Version, spec_str: str
+    ) -> bool:
+        spec = v_packaging_Version(spec_str)
+        if not prospective > spec:
+            return False
+        if not spec.is_postrelease and prospective.is_postrelease:
+            if v_packaging_Version(prospective.base_version) == v_packaging_Version(
+                spec.base_version
+            ):
+                return False
+        if prospective.local is not None:
+            if v_packaging_Version(prospective.base_version) == v_packaging_Version(
+                spec.base_version
+            ):
+                return False
+        return True
+
+    def _compare_arbitrary(self, prospective: v_packaging_Version, spec: str) -> bool:
+        return str(prospective).lower() == str(spec).lower()
+
+    def __contains__(self, item: Union[str, v_packaging_Version]) -> bool:
+        return self.contains(item)
+
+    def contains(
+        self, item: v_packaging_UnparsedVersion, prereleases: Optional[bool] = None
+    ) -> bool:
+        if prereleases is None:
+            prereleases = self.prereleases
+        normalized_item = v_packaging__coerce_version(item)
+        if normalized_item.is_prerelease and not prereleases:
+            return False
+        operator_callable: v_packaging_CallableOperator = self._get_operator(
+            self.operator
+        )
+        return operator_callable(normalized_item, self.version)
+
+    def filter(
+        self,
+        iterable: Iterable[v_packaging_UnparsedVersionVar],
+        prereleases: Optional[bool] = None,
+    ) -> Iterator[v_packaging_UnparsedVersionVar]:
+        yielded = False
+        found_prereleases = []
+        kw = {"prereleases": prereleases if prereleases is not None else True}
+        for version in iterable:
+            v_packaging_parsed_version = v_packaging__coerce_version(version)
+            if self.contains(v_packaging_parsed_version, **kw):
+                if v_packaging_parsed_version.is_prerelease and not (
+                    prereleases or self.prereleases
+                ):
+                    found_prereleases.append(version)
+                else:
+                    yielded = True
+                    yield version
+        if not yielded and found_prereleases:
+            for version in found_prereleases:
+                yield version
+
+
+v_packaging__prefix_regex = re.compile("^([0-9]+)((?:a|b|c|rc)[0-9]+)$")
+
+
+def v_packaging__version_split(version: str) -> List[str]:
+    result: List[str] = []
+    for item in version.split("."):
+        match = v_packaging__prefix_regex.search(item)
+        if match:
+            result.extend(match.groups())
+        else:
+            result.append(item)
+    return result
+
+
+def v_packaging__is_not_suffix(segment: str) -> bool:
+    return not any(
+        segment.startswith(prefix) for prefix in ("dev", "a", "b", "rc", "post")
+    )
+
+
+def v_packaging__pad_version(
+    left: List[str], right: List[str]
+) -> Tuple[List[str], List[str]]:
+    left_split, right_split = [], []
+    left_split.append(list(itertools.takewhile(lambda x: x.isdigit(), left)))
+    right_split.append(list(itertools.takewhile(lambda x: x.isdigit(), right)))
+    left_split.append(left[len(left_split[0]) :])
+    right_split.append(right[len(right_split[0]) :])
+    left_split.insert(1, ["0"] * max(0, len(right_split[0]) - len(left_split[0])))
+    right_split.insert(1, ["0"] * max(0, len(left_split[0]) - len(right_split[0])))
+    return list(itertools.chain(*left_split)), list(itertools.chain(*right_split))
+
+
+class v_packaging_SpecifierSet(v_packaging_BaseSpecifier):
+    def __init__(
+        self, specifiers: str = "", prereleases: Optional[bool] = None
+    ) -> None:
+        split_specifiers = [s.strip() for s in specifiers.split(",") if s.strip()]
+        v_packaging_parsed: Set[v_packaging_Specifier] = set()
+        for specifier in split_specifiers:
+            v_packaging_parsed.add(v_packaging_Specifier(specifier))
+        self._specs = frozenset(v_packaging_parsed)
+        self._prereleases = prereleases
+
+    @property
+    def prereleases(self) -> Optional[bool]:
+        if self._prereleases is not None:
+            return self._prereleases
+        if not self._specs:
+            return None
+        return any(s.prereleases for s in self._specs)
+
+    @prereleases.setter
+    def prereleases(self, value: bool) -> None:
+        self._prereleases = value
+
+    def __repr__(self) -> str:
+        pre = (
+            f", prereleases={self.prereleases!r}"
+            if self._prereleases is not None
+            else ""
+        )
+        return f"<SpecifierSet({str(self)!r}{pre})>"
+
+    def __str__(self) -> str:
+        return ",".join(sorted(str(s) for s in self._specs))
+
+    def __hash__(self) -> int:
+        return hash(self._specs)
+
+    def __and__(
+        self, other: Union["v_packaging_SpecifierSet", str]
+    ) -> "v_packaging_SpecifierSet":
+        if isinstance(other, str):
+            other = v_packaging_SpecifierSet(other)
+        elif not isinstance(other, v_packaging_SpecifierSet):
+            return NotImplemented
+        specifier = v_packaging_SpecifierSet()
+        specifier._specs = frozenset(self._specs | other._specs)
+        if self._prereleases is None and other._prereleases is not None:
+            specifier._prereleases = other._prereleases
+        elif self._prereleases is not None and other._prereleases is None:
+            specifier._prereleases = self._prereleases
+        elif self._prereleases == other._prereleases:
+            specifier._prereleases = self._prereleases
+        else:
+            raise ValueError(
+                "Cannot combine v_packaging_SpecifierSets with True and False prerelease overrides."  # noqa
+            )
+        return specifier
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, (str, v_packaging_Specifier)):
+            other = v_packaging_SpecifierSet(str(other))
+        elif not isinstance(other, v_packaging_SpecifierSet):
+            return NotImplemented
+        return self._specs == other._specs
+
+    def __len__(self) -> int:
+        return len(self._specs)
+
+    def __iter__(self) -> Iterator[v_packaging_Specifier]:
+        return iter(self._specs)
+
+    def __contains__(self, item: v_packaging_UnparsedVersion) -> bool:
+        return self.contains(item)
+
+    def contains(
+        self,
+        item: v_packaging_UnparsedVersion,
+        prereleases: Optional[bool] = None,
+        installed: Optional[bool] = None,
+    ) -> bool:
+        if not isinstance(item, v_packaging_Version):
+            item = v_packaging_Version(item)
+        if prereleases is None:
+            prereleases = self.prereleases
+        if not prereleases and item.is_prerelease:
+            return False
+        if installed and item.is_prerelease:
+            item = v_packaging_Version(item.base_version)
+        return all(s.contains(item, prereleases=prereleases) for s in self._specs)
+
+    def filter(
+        self,
+        iterable: Iterable[v_packaging_UnparsedVersionVar],
+        prereleases: Optional[bool] = None,
+    ) -> Iterator[v_packaging_UnparsedVersionVar]:
+        if prereleases is None:
+            prereleases = self.prereleases
+        if self._specs:
+            for spec in self._specs:
+                iterable = spec.filter(iterable, prereleases=bool(prereleases))
+            return iter(iterable)
+        else:
+            filtered: List[v_packaging_UnparsedVersionVar] = []
+            found_prereleases: List[v_packaging_UnparsedVersionVar] = []
+            for item in iterable:
+                v_packaging_parsed_version = v_packaging__coerce_version(item)
+                if v_packaging_parsed_version.is_prerelease and not prereleases:
+                    if not filtered:
+                        found_prereleases.append(item)
+                else:
+                    filtered.append(item)
+            if not filtered and found_prereleases and prereleases is None:
+                return iter(found_prereleases)
+            return iter(filtered)
+
+
+Version = v_packaging_Version
+SpecifierSet = v_packaging_SpecifierSet
+
+#### END VENDORED PACKAGING ####
 
 
 class Spinner:
@@ -2027,6 +2893,15 @@ def _read_metadata_block(script: str) -> dict:
         return {}
 
 
+def _check_python(requires: str):
+    version = Version(platform.python_version())
+    if version not in SpecifierSet(requires):
+        err_quit(
+            f"Running python {a.yellow}{version}{a.end} does "
+            f"not satisfy 'requires-python: {requires}'"
+        )
+
+
 def _parse_date(txt: str) -> datetime:
     """attempt to parse datetime string
 
@@ -2532,9 +3407,11 @@ class Viv:
                 script_text = fetch_script(script)
 
             viv_used = uses_viv(script_text)
-            deps = _read_metadata_block(script_text).get("dependencies", [])
+            metadata = _read_metadata_block(script_text)
+            deps = metadata.get("dependencies", [])
 
-            # TODO: incorporate python version checking...
+            if requires := metadata.get("requires-python", ""):
+                _check_python(requires)
 
             if viv_used and deps:
                 error(
