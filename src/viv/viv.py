@@ -1724,9 +1724,9 @@ class Viv:
             f"Write shim for {a.bold}{bin}{a.end} to {a.green}{output}{a.end}?",
             yes=yes,
         ):
+            output.parent.mkdir(exist_ok=True, parents=True)
             with output.open("w") as f:
                 f.write(self.t.shim(path, self.local_source, standalone, spec, bin))
-
             make_executable(output)
 
     @staticmethod
