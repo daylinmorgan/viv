@@ -1,4 +1,4 @@
-from viv import SpecifierSet, Version, toml_loads
+from viv.viv import SpecifierSet, Version, toml_loads
 
 
 def test_packaging():
