@@ -21,20 +21,21 @@ viv = "viv:main"
 
 [tool.pdm]
 version = { source = "scm" }
+# need python 3.9 for these which I usually have anyways
+ignore_package_warnings = ["sphinx*", "myst-parser"]
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "pre-commit>=3",
     "mypy>=0.991",
     "astor>=0.8.1",
 ]
 docs = [
-  "sphinx",
-  "sphinx-autobuild",
-  "sphinx-copybutton",
-  "myst-parser",
-  "shibuya",
-  "yartsu"
+    "sphinx",
+    "sphinx-autobuild",
+    "sphinx-copybutton",
+    "myst-parser",
+    "shibuya",
+    "yartsu",
 ]
 test = [
   "pytest",
