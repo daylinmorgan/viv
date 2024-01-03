@@ -58,9 +58,9 @@ __version__ = "2023.1003-pep723"
 
 #### START VENDORED TOMLI ####
 
-try:
+if sys.version_info >= (3, 11):
     from tomllib import loads as toml_loads
-except ImportError:
+else:
     # MODIFIED FROM https://github.com/hukkin/tomli
     # see below for original license
     # SPDX-License-Identifier: MIT
@@ -71,7 +71,6 @@ except ImportError:
     from collections.abc import Iterable  # noqa
     from functools import lru_cache  # noqa
     from datetime import date, datetime, time, timedelta, timezone, tzinfo  # noqa
-    from io import BinaryIO
     from types import MappingProxyType  # noqa
     from typing import IO, Any, Callable, NamedTuple  # noqa
 
@@ -190,7 +189,7 @@ except ImportError:
         pass
 
     def v_tomli_load(
-        __fp: BinaryIO, *, parse_float: v_tomli_ParseFloat = float
+        __fp: IO[bytes], *, parse_float: v_tomli_ParseFloat = float
     ) -> dict[str, Any]:
         b = __fp.read()
         try:
@@ -1631,7 +1630,8 @@ class v_packaging_SpecifierSet(v_packaging_BaseSpecifier):
             specifier._prereleases = self._prereleases
         else:
             raise ValueError(
-                "Cannot combine v_packaging_SpecifierSets with True and False prerelease overrides."  # noqa
+                "Cannot combine v_packaging_SpecifierSets "
+                "with True and False prerelease overrides."
             )
         return specifier
 

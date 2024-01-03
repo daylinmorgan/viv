@@ -59,7 +59,7 @@ class Package:
     def ensure(self):
         dir = Path(__file__).parent / self.name
         if not dir.is_dir():
-            subprocess.run(["git", "clone", self.url])
+            subprocess.run(["git", "clone", self.url, dir])
             subprocess.run(["git", "-C", dir, "checkout", self.rev])
 
     @property
@@ -173,16 +173,17 @@ SpecifierSet = v_packaging_SpecifierSet
     Package(
         name="tomli",
         url="https://github.com/hukkin/tomli.git",
-        rev="2.0.1",
+        # rev="2.0.1",
+        rev="a6138675bcca68eea5b8abec7c2ec06d57f965a0",
         files=(
             ("_types", [[7, 11]]),
             ("_re", [[14, 107]]),
             ("_parser", [[20, 691]]),
         ),
         prefix="""
-try:
+if sys.version_info >= (3, 11):
     from tomllib import loads as toml_loads
-except ImportError:
+else:
     # MODIFIED FROM https://github.com/hukkin/tomli
     # see below for original license
     # SPDX-License-Identifier: MIT
@@ -194,7 +195,6 @@ except ImportError:
     from collections.abc import Iterable  # noqa
     from functools import lru_cache  # noqa
     from datetime import date, datetime, time, timedelta, timezone, tzinfo  # noqa
-    from io import BinaryIO
     from types import MappingProxyType  # noqa
     from typing import IO, Any, Callable, NamedTuple  # noqa
 """,
