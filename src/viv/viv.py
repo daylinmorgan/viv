@@ -2775,6 +2775,16 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
     return vivenv.path
 
 
+def run() -> Path:
+    """create a vivenv and append to sys.path using embedded metadata"""
+    source = get_caller_path().read_text()
+    metadata = _read_metadata_block(source)
+    deps = metadata.get("dependencies", [])
+    if requires := metadata.get("requires-python", ""):
+        _check_python(requires)
+    return use(*deps)
+
+
 def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
     if requirements:
         with requirements.open("r") as f:
@@ -2854,16 +2864,36 @@ def make_executable(path: Path) -> None:
     os.chmod(path, mode)
 
 
-def uses_viv(txt: str) -> bool:
+# TODO: abstract/deduplicate these functions
+def _uses_viv_use(txt: str) -> bool:
     return bool(
         re.search(
             r"""
             ^(?!\#)\s*
-            (?:__import__\(\s*["']viv["']\s*\))
+            (?:__import__\(\s*["']viv["']\s*\).use)
             |
             (?:from\ viv\ import\ use)
+            #|
+            #(?:import\ viv)
+            | 
+            (?:viv.use)
+        """,
+            txt,
+            re.VERBOSE | re.MULTILINE,
+        )
+    )
+
+
+def _uses_viv_run(txt: str) -> bool:
+    return bool(
+        re.search(
+            r"""
+            ^(?!\#)\s*
+            (?:__import__\(\s*["']viv["']\s*\).run)
             |
-            (?:import\ viv)
+            (?:from\ viv\ import\ run)
+            |
+            (?:viv.run)
         """,
             txt,
             re.VERBOSE | re.MULTILINE,
@@ -3405,21 +3435,23 @@ class Viv:
             else:
                 scriptpath = tmppath / name
                 script_text = fetch_script(script)
+                scriptpath.write_text(script_text)
 
-            viv_used = uses_viv(script_text)
+            has_use = _uses_viv_use(script_text)
+            has_run = _uses_viv_run(script_text)
             metadata = _read_metadata_block(script_text)
             deps = metadata.get("dependencies", [])
 
             if requires := metadata.get("requires-python", ""):
                 _check_python(requires)
 
-            if viv_used and deps:
+            if has_use and deps:
                 error(
                     "Script Dependencies block and "
                     "`viv.use` API can't be used in the same script"
                 )
 
-            if not self.local_source and viv_used:
+            if not self.local_source and (has_use or has_run):
                 log.debug("fetching remote copy to use for python api")
                 (tmppath / "viv.py").write_text(
                     fetch_script(
@@ -3427,16 +3459,25 @@ class Viv:
                     )
                 )
 
-            scriptpath.write_text(script_text)
             self._update_cache(env, keep, tmpdir)
 
-            if viv_used:
+            if has_use:
                 log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
                 subprocess_run_quit(
                     [sys.executable, "-S", scriptpath, *rest],
                     env=dict(
                         env,
                         VIV_SPEC=" ".join(f"'{req}'" for req in spec),
+                        PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
+                    ),
+                )
+            elif has_run:
+                log.debug("script invokes viv.run letting subprocess handle deps")
+                print(tmppath)
+                subprocess_run_quit(
+                    [sys.executable, "-S", scriptpath, *rest],
+                    env=dict(
+                        env,
                         PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
                     ),
                 )
