@@ -2461,7 +2461,6 @@ def _get_user() -> str:
 
     try:
         user = getuser()
-
     except ImportError as e:
         user = "dummy"
         log.info(e.msg)
@@ -2773,7 +2772,6 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
         vivenv.meta.addfile(get_caller_path())
         vivenv.meta.write()
         vivenv.activate()
-
     return vivenv.path
 
 
@@ -3385,7 +3383,9 @@ class Viv:
             if run_mode == "ephemeral":
                 new_cache = tmpdir
             elif run_mode == "semi-ephemeral":
-                new_cache = str(Path(tempfile.gettempdir()) / "viv-ephemeral-cache")
+                new_cache = str(
+                    Path(tempfile.gettempdir()) / ("viv-ephemeral-cache-" + _get_user())
+                )
 
             env.update({"VIV_CACHE": new_cache})
             os.environ["VIV_CACHE"] = new_cache
