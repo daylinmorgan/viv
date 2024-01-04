@@ -33,6 +33,7 @@ from argparse import (
 from argparse import ArgumentParser as StdArgParser
 from contextlib import contextmanager
 from datetime import datetime
+from enum import Enum
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from textwrap import dedent, fill
@@ -2864,41 +2865,43 @@ def make_executable(path: Path) -> None:
     os.chmod(path, mode)
 
 
-# TODO: abstract/deduplicate these functions
-def _uses_viv_use(txt: str) -> bool:
-    return bool(
-        re.search(
+class _Viv_Mode(Enum):
+    NONE = 0
+    USE = 1
+    RUN = 2
+
+
+def _uses_viv(txt: str) -> _Viv_Mode:
+    matches = [
+        match.group("mode")
+        for match in re.finditer(
             r"""
-            ^(?!\#)\s*
-            (?:__import__\(\s*["']viv["']\s*\).use)
-            |
-            (?:from\ viv\ import\ use)
-            #|
-            #(?:import\ viv)
-            | 
-            (?:viv.use)
-        """,
+            ^(?!\#)\s*    # ignore comments/shebangs
+            (
+              (?:__import__\(\s*["']viv["']\s*\)\.)
+              |
+              (?:from\s+viv\s+import\s+)
+              |
+              (?:viv\.)
+            )
+            (?P<mode>(\w+))
+            """,
             txt,
             re.VERBOSE | re.MULTILINE,
         )
-    )
-
-
-def _uses_viv_run(txt: str) -> bool:
-    return bool(
-        re.search(
-            r"""
-            ^(?!\#)\s*
-            (?:__import__\(\s*["']viv["']\s*\).run)
-            |
-            (?:from\ viv\ import\ run)
-            |
-            (?:viv.run)
-        """,
-            txt,
-            re.VERBOSE | re.MULTILINE,
+    ]
+    if len(matches) == 0:
+        return _Viv_Mode.NONE
+    elif len(matches) > 1:
+        err_quit(
+            "Unexpected number of viv references in script.\n"
+            "Expected only 1, found: "
+            + ", ".join((a.style(match, "bold") for match in matches))
         )
-    )
+    elif (match := matches[0]) in {"run", "use"}:
+        return _Viv_Mode[match.upper()]
+    else:
+        err_quit(f"Unknown function {a.bold}{matches[0]}{a.end} associated with viv.")
 
 
 METADATA_BLOCK = (
@@ -3437,21 +3440,20 @@ class Viv:
                 script_text = fetch_script(script)
                 scriptpath.write_text(script_text)
 
-            has_use = _uses_viv_use(script_text)
-            has_run = _uses_viv_run(script_text)
+            mode = _uses_viv(script_text)
             metadata = _read_metadata_block(script_text)
             deps = metadata.get("dependencies", [])
 
             if requires := metadata.get("requires-python", ""):
                 _check_python(requires)
 
-            if has_use and deps:
+            if mode == _Viv_Mode.USE and deps:
                 error(
                     "Script Dependencies block and "
                     "`viv.use` API can't be used in the same script"
                 )
 
-            if not self.local_source and (has_use or has_run):
+            if not self.local_source and mode != _Viv_Mode.NONE:
                 log.debug("fetching remote copy to use for python api")
                 (tmppath / "viv.py").write_text(
                     fetch_script(
@@ -3461,7 +3463,7 @@ class Viv:
 
             self._update_cache(env, keep, tmpdir)
 
-            if has_use:
+            if mode == _Viv_Mode.USE:
                 log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
                 subprocess_run_quit(
                     [sys.executable, "-S", scriptpath, *rest],
@@ -3471,7 +3473,7 @@ class Viv:
                         PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
                     ),
                 )
-            elif has_run:
+            elif mode == _Viv_Mode.RUN:
                 log.debug("script invokes viv.run letting subprocess handle deps")
                 subprocess_run_quit(
                     [sys.executable, "-S", scriptpath, *rest],
