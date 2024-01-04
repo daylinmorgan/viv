@@ -3473,7 +3473,6 @@ class Viv:
                 )
             elif has_run:
                 log.debug("script invokes viv.run letting subprocess handle deps")
-                print(tmppath)
                 subprocess_run_quit(
                     [sys.executable, "-S", scriptpath, *rest],
                     env=dict(
