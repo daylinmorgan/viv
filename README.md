@@ -29,7 +29,7 @@
 
 Try before you buy!
 ```sh
-python3 <(curl -fsSL viv.dayl.in/viv.py) run pycowsay -- "viv isn't venv\!"
+python3 <(curl -fsSL viv.dayl.in/viv.py) run frogmouth -- gh daylinmorgan/viv
 ```
 ---
 
