@@ -54,7 +54,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2023.1003-pep723"
+__version__ = "2024.1004"
 
 
 #### START VENDORED TOMLI ####
