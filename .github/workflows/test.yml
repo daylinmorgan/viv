@@ -5,7 +5,7 @@ on:
   workflow_call:
   workflow_dispatch:
   push:
-   - paths:
+    paths:
       - 'src/**/*.py'
       - 'tests/**/*.py'
       - 'pyproject.toml'
