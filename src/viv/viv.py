@@ -1363,7 +1363,7 @@ class v_packaging_Specifier(v_packaging_BaseSpecifier):
         )
         self._prereleases = prereleases
 
-    @property
+    @property  # type: ignore
     def prereleases(self) -> bool:
         if self._prereleases is not None:
             return self._prereleases
@@ -2921,7 +2921,7 @@ def _read_metadata_block(script: str) -> dict:
         return {}
 
 
-def _check_python(requires: str):
+def _check_python(requires: str) -> None:
     version = Version(platform.python_version())
     if version not in SpecifierSet(requires):
         err_quit(
@@ -3866,7 +3866,11 @@ class Cli:
         )
 
 
-def _no_traceback_excepthook(exc_type, exc_val, traceback):
+def _no_traceback_excepthook(
+    exc_type: type[BaseException],
+    exc_val: BaseException,
+    traceback: TracebackType | None,
+) -> None:
     # https://stackoverflow.com/questions/7073268/remove-traceback-in-python-on-ctrl-c
     pass
 
