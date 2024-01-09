@@ -2657,6 +2657,8 @@ class ViVenv:
         size = float(
             sum(p.stat().st_size for p in Path(self.path).rglob("*") if p.is_file())
         )
+
+        unit = ""
         for unit in ("", "K", "M", "G", "T"):
             if size < 1024:
                 break
@@ -2665,31 +2667,19 @@ class ViVenv:
         self.size = f"{size:.1f}{unit}B"
 
     @contextmanager
-    def use(self, keep: bool = True) -> Generator[None, None, None]:
+    def use(self, keep: bool = True, tmpdir: str = "") -> Generator[None, None, None]:
         run_mode = Env().viv_run_mode
         _path = self.path
 
-        def common() -> None:
-            self.ensure()
-            self.touch()
+        if tmpdir and not keep:
+            _update_cache(run_mode=run_mode, tmpdir=tmpdir)
 
         try:
-            if self.loaded or keep or run_mode == "persist":
-                common()
-                yield
-            elif run_mode == "ephemeral":
-                with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-                    self.set_path(Path(tmpdir))
-                    common()
-                    yield
-            elif run_mode == "semi-ephemeral":
-                ephemeral_cache = _path_ok(
-                    Path(tempfile.gettempdir()) / f"viv-ephemeral-cache-{_get_user()}"
-                )
-                os.environ.update(dict(VIV_CACHE=str(ephemeral_cache)))
-                self.set_path(ephemeral_cache / "venvs" / self.name)
-                common()
-                yield
+            self.set_path(Cfg().cache_venv / self.name)
+            self.ensure()
+            self.touch()
+            yield
+
         finally:
             self.set_path(_path)
 
@@ -2957,6 +2947,18 @@ def _parse_date(txt: str) -> datetime:
     )
 
 
+def _update_cache(run_mode: str, tmpdir: str) -> None:
+    new_cache = tmpdir
+
+    if run_mode == "semi-ephemeral":
+        new_cache = str(
+            Path(tempfile.gettempdir()) / ("viv-ephemeral-cache-" + _get_user())
+        )
+
+    # by default ephemeral
+    os.environ["VIV_CACHE"] = new_cache
+
+
 class Cache:
     def __init__(self) -> None:
         self.vivenvs = self._get_venvs()
@@ -3019,6 +3021,92 @@ class Cache:
             return {vivenv for vivenv in set.union(*vivenv_sets)}
         else:
             return set()
+
+
+class Script:
+    def __init__(
+        self, path: str, spec: List[str], keep: bool, rest: List[str], viv: Viv
+    ):
+        self.path = path
+        self.spec = spec
+        self.keep = keep
+        self.rest = rest
+        self.viv = viv
+
+        self.name = path.split("/")[-1]
+        self.remote = Path(path).is_file()  # does this work for symlinks?
+
+    def run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
+            tmppath = Path(tmpdir)
+
+            if self.remote:
+                scriptpath = Path(self.path).absolute()
+                script_text = scriptpath.read_text()
+            else:
+                scriptpath = tmppath / self.name
+                script_text = fetch_script(self.path)
+                scriptpath.write_text(script_text)
+
+            mode = _uses_viv(script_text)
+            metadata = _read_metadata_block(script_text)
+            deps = metadata.get("dependencies", [])
+
+            if requires := metadata.get("requires-python", ""):
+                _check_python(requires)
+
+            if mode == _Viv_Mode.USE and deps:
+                error(
+                    "Inline Script Metadata block and "
+                    "`viv.use` API can't be used in the same script"
+                )
+
+            if not self.viv.local_source and mode != _Viv_Mode.NONE:
+                log.debug("fetching remote copy to use for python api")
+                (tmppath / "viv.py").write_text(
+                    fetch_script(
+                        "https://raw.githubusercontent.com/daylinmorgan/viv/latest/src/viv/viv.py"
+                    )
+                )
+
+            _update_cache(run_mode=Env().viv_run_mode, tmpdir=tmpdir)
+
+            env = dict(
+                env := os.environ,
+                PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
+            )
+
+            if not self.spec and not deps:
+                log.warning("using viv with empty spec, skipping vivenv creation")
+                subprocess_run_quit([sys.executable, "-S", scriptpath, *self.rest])
+
+            elif mode == _Viv_Mode.USE:
+                log.debug(
+                    f"script invokes viv.use passing along spec: \n  '{self.spec}'"
+                )
+                env.update(VIV_SPEC=" ".join(f"'{req}'" for req in self.spec))
+                subprocess_run_quit(
+                    [sys.executable, "-S", scriptpath, *self.rest], env=env
+                )
+            elif mode == _Viv_Mode.RUN:
+                log.debug("script invokes viv.run letting subprocess handle deps")
+                subprocess_run_quit(
+                    [sys.executable, "-S", scriptpath, *self.rest], env=env
+                )
+
+            else:
+                vivenv = ViVenv(self.spec + deps)
+                with vivenv.use(keep=self.keep):
+                    vivenv.meta.write()
+                    subprocess_run_quit(
+                        [vivenv.python, "-S", scriptpath, *self.rest],
+                        env=dict(
+                            env,
+                            PYTHONPATH=":".join(
+                                filter(None, (vivenv.site_packages, Env().pythonpath))
+                            ),
+                        ),
+                    )
 
 
 class Viv:
@@ -3407,96 +3495,6 @@ class Viv:
                 f.write(self.t.shim(path, self.local_source, standalone, spec, bin))
             make_executable(output)
 
-    @staticmethod
-    def _update_cache(env: os._Environ[str], keep: bool, tmpdir: str) -> None:
-        run_mode = Env().viv_run_mode
-        if not keep:
-            if run_mode == "ephemeral":
-                new_cache = tmpdir
-            elif run_mode == "semi-ephemeral":
-                new_cache = str(
-                    Path(tempfile.gettempdir()) / ("viv-ephemeral-cache-" + _get_user())
-                )
-
-            env.update({"VIV_CACHE": new_cache})
-            os.environ["VIV_CACHE"] = new_cache
-
-    def _run_script(
-        self, spec: List[str], script: str, keep: bool, rest: List[str]
-    ) -> None:
-        env = os.environ
-        name = script.split("/")[-1]
-
-        with tempfile.TemporaryDirectory(prefix="viv-") as tmpdir:
-            tmppath = Path(tmpdir)
-
-            if Path(script).is_file():
-                scriptpath = Path(script).absolute()
-                script_text = scriptpath.read_text()
-            else:
-                scriptpath = tmppath / name
-                script_text = fetch_script(script)
-                scriptpath.write_text(script_text)
-
-            mode = _uses_viv(script_text)
-            metadata = _read_metadata_block(script_text)
-            deps = metadata.get("dependencies", [])
-
-            if requires := metadata.get("requires-python", ""):
-                _check_python(requires)
-
-            if mode == _Viv_Mode.USE and deps:
-                error(
-                    "Script Dependencies block and "
-                    "`viv.use` API can't be used in the same script"
-                )
-
-            if not self.local_source and mode != _Viv_Mode.NONE:
-                log.debug("fetching remote copy to use for python api")
-                (tmppath / "viv.py").write_text(
-                    fetch_script(
-                        "https://raw.githubusercontent.com/daylinmorgan/viv/latest/src/viv/viv.py"
-                    )
-                )
-
-            self._update_cache(env, keep, tmpdir)
-
-            if mode == _Viv_Mode.USE:
-                log.debug(f"script invokes viv.use passing along spec: \n  '{spec}'")
-                subprocess_run_quit(
-                    [sys.executable, "-S", scriptpath, *rest],
-                    env=dict(
-                        env,
-                        VIV_SPEC=" ".join(f"'{req}'" for req in spec),
-                        PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
-                    ),
-                )
-            elif mode == _Viv_Mode.RUN:
-                log.debug("script invokes viv.run letting subprocess handle deps")
-                subprocess_run_quit(
-                    [sys.executable, "-S", scriptpath, *rest],
-                    env=dict(
-                        env,
-                        PYTHONPATH=":".join((str(tmppath), env.get("PYTHONPATH", ""))),
-                    ),
-                )
-            elif not spec and not deps:
-                log.warning("using viv with empty spec, skipping vivenv creation")
-                subprocess_run_quit([sys.executable, "-S", scriptpath, *rest])
-            else:
-                vivenv = ViVenv(spec + deps)
-                with vivenv.use(keep=keep):
-                    vivenv.meta.write()
-                    subprocess_run_quit(
-                        [vivenv.python, "-S", scriptpath, *rest],
-                        env=dict(
-                            env,
-                            PYTHONPATH=":".join(
-                                filter(None, (vivenv.site_packages, Env().pythonpath))
-                            ),
-                        ),
-                    )
-
     def cmd_run(
         self,
         reqs: List[str],
@@ -3520,7 +3518,7 @@ class Viv:
         spec = combined_spec(reqs, requirements)
 
         if script:
-            self._run_script(spec, script, keep, rest)
+            Script(path=script, spec=spec, keep=keep, rest=rest, viv=self).run()
         else:
             _, bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
