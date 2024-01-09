@@ -26,7 +26,6 @@ while still unleashing the full power of python scripting with it's entire ecosy
 `Viv`'s uncompromising insistence on portability means that it will always,
 only use the standard library and never exceed a single script.
 
-Documentation is currently a WIP please see the [cli reference](./cli.md) and the [README](https://github.com/daylinmorgan/viv)
 
 ```{toctree}
 :hidden:

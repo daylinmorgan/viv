@@ -44,6 +44,16 @@ while still unleashing the full power of Python scripting with its entire ecosys
 
 For that reason, any usage of the CLI can be accomplished using a remote copy as seen in the below install command.
 
+
+`Viv` is a standalone dependency-free `venv` creator (just needs python + pip).
+`Viv` helps you ignore silly things like managing temporary or rarely used virtual environments,
+while still unleashing the full power of python scripting with it's entire ecosystem at your disposal.
+
+`Viv`'s uncompromising insistence on portability means that it will always,
+only use the standard library and never exceed a single script.
+
+See the [documentation](https://viv.dayl.in/viv.py) or the [examples](https://github.com/daylinmorgan/viv/tree/main/examples) to get started.
+
 ## Setup
 
 Run the below command to install `viv`.
@@ -74,8 +84,22 @@ Placing it in its own virtual environment or installing in a user site directory
 In any Python script with external dependencies you can add this line
 to automate `vivenv` creation and installation of dependencies.
 
+As a cli:
+
+```sh
+viv run frogmouth -- gh daylinmorgan/viv
+```
+
+As a python module:
+
 ```python
 __import__("viv").use("click")
+```
+
+As an app installer:
+
+```sh
+viv shim ruff
 ```
 
 To remove all `vivenvs` you can use the below command:
@@ -89,10 +113,10 @@ To remove `viv` altogether you can use the included `purge` command:
 ```sh
 python3 <(curl -fsSL viv.dayl.in/viv.py) manage purge
 ```
+
 ## Equivalent commands from alternatives
 
 ### [pip-run](https://github.com/jaraco/pip-run)
-
 
 ```sh
 pip-run cowsay -- -m cowsay "moove over, pip-run"
@@ -131,9 +155,6 @@ for output of the below command.
 ```sh
 python3 <(curl -fsSL viv.dayl.in/viv.py) shim black -o ./black --standalone --freeze
 ```
-
-
-[^1]: You do need to have `pip` but surely you have `pip` already.
 
 [conda-shield]: https://img.shields.io/conda/vn/conda-forge/viv
 [conda-url]: https://anaconda.org/conda-forge/viv
