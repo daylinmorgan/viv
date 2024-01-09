@@ -2,9 +2,13 @@ name: 🧪 Run Tests
 
 on:
   pull_request:
-  push:
   workflow_call:
   workflow_dispatch:
+  push:
+   - paths:
+      - 'src/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
 
 jobs:
  run-tests:
