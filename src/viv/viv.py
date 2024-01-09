@@ -54,7 +54,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2024.1004"
+__version__ = "2024.1004-dev"
 
 
 #### START VENDORED TOMLI ####
@@ -1805,20 +1805,17 @@ class Env:
 
 class System:
     def __init__(self) -> None:
-        self._windows = platform.system() == "Windows"
-        (self.bin_dir, *_) = ("Scripts",) if self._windows else ("bin",)
+        self.is_win = platform.system() == "Windows"
+        (self.bin_dir, *_) = ("Scripts",) if self.is_win else ("bin",)
 
     def bin(self, exe: str) -> str:
-        return f"{exe}.exe" if self._windows else exe
+        return f"{exe}.exe" if self.is_win else exe
 
 
 system = System()
 
 
 class Cfg:
-    def __init__(self) -> None:
-        self.windows = platform.system() == "Windows"
-
     @property
     def src(self) -> Path:
         p = Path(Env().xdg_data_home) / "viv" / "viv.py"
@@ -2602,7 +2599,7 @@ class ViVenv:
                 self.path,
                 prompt=f"viv-{self.name}",
                 clear=True,
-                symlinks=platform.system() != "Windows",
+                symlinks=not system.is_win,
             )
 
         self.meta.created = str(datetime.today())
@@ -3277,6 +3274,7 @@ class Viv:
                         "Pip": subprocess_run(
                             ["pip", "--version"], check_output=True
                         ).strip(),
+                        "PYTHONPATH": os.getenv("PYTHONPATH", ""),
                     }
                 )
 
