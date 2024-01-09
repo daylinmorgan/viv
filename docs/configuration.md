@@ -6,7 +6,7 @@
 : **ephemeral** (default): 
   : `viv run` will generate a temporary directory that is removed following execution
 : **semi-ephemeral**
-  : `viv run` will set the `VIV_CACHE` the directory to `$TEMPDIR/viv-ephemeral-cache-$USER`
+  : `viv run` will set the `VIV_CACHE` directory to `$TEMPDIR/viv-ephemeral-cache-$USER`
 : persist
   : `viv run` will always use the standard `VIV_CACHE` which maximizes reusable vivenvs
 
@@ -14,7 +14,7 @@
 : Path to use for vivenv cache by default `$XDG_CACHE_HOME/viv` or `$HOME/.cache/viv`
 
 `VIV_LOG_PATH`
-: Path to use log file by default `$XDG_DATA_HOME/viv/viv.log` or `$HOME/.local/share/viv/viv.log`
+: Path to use for log file by default `$XDG_DATA_HOME/viv/viv.log` or `$HOME/.local/share/viv/viv.log`
 
 `VIV_BIN_DIR`
 : Path to use for shims by default `$HOME/.local/bin`
@@ -22,7 +22,7 @@
 `VIV_NO_SETUPTOOLS`
 : Don't add setuptools to generated vivenvs.
 : Many legacy packages expect setuptools to be available
-  and don't appropriate declare it as dependency.
+  and don't appropriately declare it as a dependency.
   To minimize frustration `setuptools` is added to every dependency
   list.
 

@@ -3,10 +3,10 @@
 Viv works by ensuring scripts or a given
 command are run in an appropriate environment with all specified dependencies.
 
-```{tip}
-`viv` is a single script and available at viv.dayl.in/viv.py
+:::{tip}
+`viv` is a single script and available at `viv.dayl.in/viv.py`
 meaning every instance of `viv` in these examples could be `python3 <(curl -fsSL viv.dayl.in/viv.py)`
-```
+:::
 
 ## Run CLI Apps
 
@@ -16,7 +16,7 @@ Run a python app that provides an entrypoint and separate args with `--`:
 viv run frogmouth -- gh daylinmorgan/viv
 ```
 
-To run a python module use the `-b/--bin` flag and specify `python`:
+Run a python module use the `-b/--bin` flag and specify `python`:
 
 ```sh
 viv run rich -b python -- -m rich
@@ -79,13 +79,13 @@ invoke it with embedded metadata thanks to shebangs:
 # ///
 ```
 
-```{note}
+:::{note}
 If using a shebang on a python script `-s/--script` must be the last argument
-```
+:::
 
-```{seealso}
+:::{seealso}
 Check out [PEP723](https://peps.python.org/pep-0723/) for more info about inline script metadata.
-```
+:::
 
 In any python script with external dependencies you can also add this line prior to imports
 to automate `vivenv` creation and installation of dependencies.
@@ -146,10 +146,10 @@ viv env remove d4b342b3
 
 To get more information about vivenvs you can use `viv list --verbose` or `viv env info <hash>`
 
-```{note}
+:::{note}
 For commands that expect a vivenv hash/name you can use as few characters as you
 as you like and `viv` will match it against the existing vivenvs in the cache.
-```
+:::
 
 You can list vivenvs given a criteria using `--filter` for example:
 
@@ -168,13 +168,13 @@ Or no files:
 viv list --filter "files:None"
 ```
 
-```{note}
+:::{note}
 `--filter "files:None"` will also apply to vivenvs
 in which the original file is no longer on the disk
-```
+:::
 
 The available filtering criteria are `accessed-after`,
-`accessed-before`, `created-before`, `created-after`, and `files`.
+`accessed-before`, `created-before`, `created-after`, `spec` and `files`.
 
 To remove all `vivenvs` you can use the below command:
 
