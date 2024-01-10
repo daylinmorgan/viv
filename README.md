@@ -33,18 +33,6 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run frogmouth -- gh daylinmorgan/viv
 ```
 ---
 
-`Viv` is a standalone dependency-free `venv` creator [^1].
-`Viv` helps you ignore silly things like managing temporary or rarely used virtual environments,
-while still unleashing the full power of Python scripting with its entire ecosystem at your disposal.
-
-`Viv`'s uncompromising insistence on portability means that it will always:
-
-1. only use the standard library
-2. never exceed a single script.
-
-For that reason, any usage of the CLI can be accomplished using a remote copy as seen in the below install command.
-
-
 `Viv` is a standalone dependency-free `venv` creator (just needs python + pip).
 `Viv` helps you ignore silly things like managing temporary or rarely used virtual environments,
 while still unleashing the full power of python scripting with it's entire ecosystem at your disposal.
