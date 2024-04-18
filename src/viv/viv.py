@@ -3452,9 +3452,9 @@ class Viv:
                 "`python3 <(curl -fsSL viv.dayl.in/viv.py) manage install`"
             )
 
-    def _pick_bin(self, reqs: List[str], bin: str) -> Tuple[str, str]:
+    def _pick_bin(self, reqs: List[str], bin: str) -> str:
         default = system.bin(re.split(r"[=><~!*]+", reqs[0])[0])
-        return default, (default if not bin else bin)
+        return default if not bin else bin
 
     def cmd_shim(
         self,
@@ -3475,8 +3475,8 @@ class Viv:
           viv shim yartsu -o ~/bin/yartsu --standalone
         """
 
-        default_bin, bin = self._pick_bin(reqs, bin)
-        output = Env().viv_bin_dir / default_bin if not output else output.absolute()
+        bin = self._pick_bin(reqs, bin)
+        output = Env().viv_bin_dir / bin if not output else output.absolute()
 
         if freeze:
             spec = resolve_deps(reqs, requirements)
@@ -3520,7 +3520,7 @@ class Viv:
         if script:
             Script(path=script, spec=spec, keep=keep, rest=rest, viv=self).run()
         else:
-            _, bin = self._pick_bin(reqs, bin)
+            bin = self._pick_bin(reqs, bin)
             vivenv = ViVenv(spec)
 
             with vivenv.use(keep=keep):
