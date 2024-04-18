@@ -1363,7 +1363,7 @@ class v_packaging_Specifier(v_packaging_BaseSpecifier):
         )
         self._prereleases = prereleases
 
-    @property  # type: ignore
+    @property
     def prereleases(self) -> bool:
         if self._prereleases is not None:
             return self._prereleases
@@ -1425,7 +1425,7 @@ class v_packaging_Specifier(v_packaging_BaseSpecifier):
         return operator_callable
 
     def _compare_compatible(self, prospective: v_packaging_Version, spec: str) -> bool:
-        prefix = ".".join(
+        prefix = v_packaging__version_join(
             list(
                 itertools.takewhile(
                     v_packaging__is_not_suffix, v_packaging__version_split(spec)
@@ -1549,13 +1549,20 @@ v_packaging__prefix_regex = re.compile("^([0-9]+)((?:a|b|c|rc)[0-9]+)$")
 
 def v_packaging__version_split(version: str) -> List[str]:
     result: List[str] = []
-    for item in version.split("."):
+    epoch, _, rest = version.rpartition("!")
+    result.append(epoch or "0")
+    for item in rest.split("."):
         match = v_packaging__prefix_regex.search(item)
         if match:
             result.extend(match.groups())
         else:
             result.append(item)
     return result
+
+
+def v_packaging__version_join(components: List[str]) -> str:
+    epoch, *rest = components
+    return f"{epoch}!{'.'.join(rest)}"
 
 
 def v_packaging__is_not_suffix(segment: str) -> bool:
@@ -1574,7 +1581,9 @@ def v_packaging__pad_version(
     right_split.append(right[len(right_split[0]) :])
     left_split.insert(1, ["0"] * max(0, len(right_split[0]) - len(left_split[0])))
     right_split.insert(1, ["0"] * max(0, len(left_split[0]) - len(right_split[0])))
-    return list(itertools.chain(*left_split)), list(itertools.chain(*right_split))
+    return list(itertools.chain.from_iterable(left_split)), list(
+        itertools.chain.from_iterable(right_split)
+    )
 
 
 class v_packaging_SpecifierSet(v_packaging_BaseSpecifier):
@@ -1582,10 +1591,7 @@ class v_packaging_SpecifierSet(v_packaging_BaseSpecifier):
         self, specifiers: str = "", prereleases: Optional[bool] = None
     ) -> None:
         split_specifiers = [s.strip() for s in specifiers.split(",") if s.strip()]
-        v_packaging_parsed: Set[v_packaging_Specifier] = set()
-        for specifier in split_specifiers:
-            v_packaging_parsed.add(v_packaging_Specifier(specifier))
-        self._specs = frozenset(v_packaging_parsed)
+        self._specs = frozenset(map(v_packaging_Specifier, split_specifiers))
         self._prereleases = prereleases
 
     @property
@@ -1631,7 +1637,7 @@ class v_packaging_SpecifierSet(v_packaging_BaseSpecifier):
             specifier._prereleases = self._prereleases
         else:
             raise ValueError(
-                "Cannot combine v_packaging_SpecifierSets "
+                "Cannot combine v_packaging_SpecifierSets"
                 "with True and False prerelease overrides."
             )
         return specifier

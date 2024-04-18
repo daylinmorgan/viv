@@ -131,12 +131,13 @@ PACKAGES = [
     Package(
         name="packaging",
         url="https://github.com/pypa/packaging.git",
-        rev="23.2",
+        # v24.0
+        rev="7a983f7f0068669ead9d4f7571be24d6c0d83eb9",
         files=(
             ("_structures", [[5, 61]]),
             ("version", [[17, 563]]),
             ("utils", [[54, 100]]),
-            ("specifiers", [[28, 1030]]),
+            ("specifiers", [[18, 1017]]),
         ),
         basepath=Path(__file__).parent / "packaging/src/packaging",
         prefix="""
