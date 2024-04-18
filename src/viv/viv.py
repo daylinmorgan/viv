@@ -3469,6 +3469,7 @@ class Viv:
         bin: str,
         output: Path,
         freeze: bool,
+        generate: bool,
         yes: bool,
         path: str,
         standalone: bool,
@@ -3500,6 +3501,11 @@ class Viv:
             with output.open("w") as f:
                 f.write(self.t.shim(path, self.local_source, standalone, spec, bin))
             make_executable(output)
+            if generate:
+                vivenv = ViVenv(spec)
+                with vivenv.use():
+                    vivenv.meta.addfile(output)
+                    vivenv.meta.write()
 
     def cmd_run(
         self,
@@ -3583,6 +3589,7 @@ class Cli:
             ),
         ],
         ("shim",): [
+            BoolArg(flag="generate", help="create vivenv w/shim"),
             BoolArg(
                 flag="freeze",
                 help="freeze/resolve all dependencies",
