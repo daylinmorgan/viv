@@ -40,7 +40,7 @@ while still unleashing the full power of python scripting with it's entire ecosy
 `Viv`'s uncompromising insistence on portability means that it will always,
 only use the standard library and never exceed a single script.
 
-See the [documentation](https://viv.dayl.in/viv.py) or the [examples](https://github.com/daylinmorgan/viv/tree/main/examples) to get started.
+See the [documentation](https://viv.dayl.in) or the [examples](https://github.com/daylinmorgan/viv/tree/main/examples) to get started.
 
 ## Setup
 
