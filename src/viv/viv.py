@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """viv isn't venv!
 
-  viv -h
-    OR
-  __import__("viv").use("requests", "bs4")
+viv -h
+  OR
+__import__("viv").use("requests", "bs4")
 """
 
 from __future__ import annotations
@@ -3877,6 +3877,20 @@ class Cli:
         )
 
 
+def _pip_check():
+    pip_version_requirement = ">=22.2"
+    if not shutil.which("pip"):
+        err_quit("viv requires pip to be installed")
+
+    # importing viv may have side effects I'm not aware of...
+    if Version((pip_version := __import__("pip").__version__)) not in SpecifierSet(
+        pip_version_requirement
+    ):
+        err_quit(
+            f"viv requires pip version {pip_version_requirement} but got {pip_version}"
+        )
+
+
 def _no_traceback_excepthook(
     exc_type: type[BaseException],
     exc_val: BaseException,
@@ -3888,6 +3902,7 @@ def _no_traceback_excepthook(
 
 def main() -> None:
     try:
+        _pip_check()
         viv = Viv()
         Cli(viv).run()
     except KeyboardInterrupt:

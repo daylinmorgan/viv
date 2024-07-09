@@ -2,6 +2,7 @@
 """
 Embed the viv.py on the sys.path at runtime rather than using PYTHONPATH
 """
+
 import sys
 
 old_sys_path = sys.path.copy()  # noqa
