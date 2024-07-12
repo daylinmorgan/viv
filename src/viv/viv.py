@@ -54,7 +54,7 @@ from typing import (
     Union,
 )
 
-__version__ = "2024.1004-dev"
+__version__ = "2024.1005"
 
 
 #### START VENDORED TOMLI ####
