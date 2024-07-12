@@ -26,12 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: update latest tag
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: update latest branch
+        run: |
+          git checkout -B latest
+          git push --force-with-lease -u origin latest
 
       - name: Generate New Release
         run: gh release create ${{ github.ref }}
