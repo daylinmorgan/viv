@@ -3417,20 +3417,24 @@ class Viv:
         cli: Path,
         yes: bool,
     ) -> None:
-        to_remove = []
+        to_remove_dirs = []
+        to_remove_files = []
         if Cfg().cache_base.is_dir():
-            to_remove.append(Cfg().cache_base)
+            to_remove_dirs.append(Cfg().cache_base)
         if src.is_file():
-            to_remove.append(src.parent if src == (Cfg().src) else src)
+            to_remove_files.append(src.parent if src == (Cfg().src) else src)
         if self.local_source and self.local_source.is_file():
             if self.local_source.parent.name == "viv":
-                to_remove.append(self.local_source.parent)
+                to_remove_files.append(self.local_source.parent)
             else:
-                to_remove.append(self.local_source)
+                to_remove_files.append(self.local_source)
 
         if cli.is_file():
-            to_remove.append(cli)
+            to_remove_files.append(cli)
 
+        to_remove = to_remove_files + [
+            f for d in to_remove_dirs for f in d.glob("**/*")
+        ]
         to_remove = sorted(set(to_remove), key=lambda p: p.is_file())
         if confirm(
             "Remove the above files/directories?",
