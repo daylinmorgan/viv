@@ -3431,7 +3431,7 @@ class Viv:
         if cli.is_file():
             to_remove.append(cli)
 
-        to_remove = list(set(to_remove))
+        to_remove = sorted(set(to_remove), key=lambda p: p.is_file())
         if confirm(
             "Remove the above files/directories?",
             "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
