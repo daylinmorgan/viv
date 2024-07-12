@@ -3432,10 +3432,9 @@ class Viv:
         if cli.is_file():
             to_remove_files.append(cli)
 
-        to_remove = to_remove_files + [
-            f for d in to_remove_dirs for f in d.glob("**/*")
-        ]
-        to_remove = sorted(set(to_remove), key=lambda p: p.is_file())
+        to_remove = sorted(
+            set(to_remove_dirs + to_remove_files), key=lambda p: p.is_file()
+        )
         if confirm(
             "Remove the above files/directories?",
             "\n".join(f"  - {a.red}{p}{a.end}" for p in to_remove) + "\n",
@@ -3443,6 +3442,7 @@ class Viv:
         ):
             for p in to_remove:
                 if p.is_dir():
+                    print(sorted(p.glob("**/*")))
                     shutil.rmtree(p)
                 else:
                     p.unlink()
