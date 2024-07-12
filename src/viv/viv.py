@@ -2008,44 +2008,34 @@ def err_quit(*msg: str, code: int = 1) -> NoReturn:
 
 class Template:
     _standalone_func = r"""def _viv_use(*pkgs, track_exe=False, name=""):
-    import hashlib, json, os, site, shutil, sys, venv  # noqa
-    from pathlib import Path  # noqa
-    from datetime import datetime  # noqa
-    from subprocess import run  # noqa
-
-    if not {*map(type, pkgs)} == {str}:
-        raise ValueError(f"spec: {pkgs} is invalid")
-
-    meta = dict.fromkeys(("created", "accessed"), (t := str(datetime.today())))
-    runner = str(Path(__file__).absolute().resolve())
-    envvar = lambda x: os.getenv(f"VIV_{x}")  # noqa
+    i, meta, add_meta = __import__, {}, lambda **kw: meta.update(**kw)
+    P, ge, q, noop = i("pathlib").Path, i("os").getenv, i("sys").exit, lambda: None
+    _if, p_str = lambda x, f: (noop, f)[x](), lambda x: f"{P(x).absolute().resolve()}"
     nopkgs = lambda p: not p.endswith(("dist-packages", "site-packages"))  # noqa
-    F, V, no_st = map(envvar, ("FORCE", "VERBOSE", "NO_SETUPTOOLS"))
-    base = Path(xdg) if (xdg := os.getenv("XDG_CACHE_HOME")) else Path.home() / ".cache"
+    _if({*map(type, spec := [*pkgs])} != {str}, lambda: q(f"spec: {pkgs} not string"))
+    F, V, NS = map(lambda x: ge(f"VIV_{x}"), ("FORCE", "VERBOSE", "NO_SETUPTOOLS"))
+    ST = not (NS and [x for x in spec if x.startswith("setuptools")])
+    add_meta(created=(now := str(i("datetime").datetime.today())))
+    base = P(xdg) if (xdg := ge("XDG_CACHE_HOME")) else P.home() / ".cache"
     (cache := (base) / "viv/venvs").mkdir(parents=True, exist_ok=True)
-    exe = str(Path(sys.executable).resolve()) if track_exe else "N/A"
-    _id = hashlib.sha256((str(spec := [*pkgs]) + exe).encode()).hexdigest()
+    exe = p_str(i("sys").executable) if track_exe else "N/A"
+    _id = i("hashlib").sha256((str(spec) + exe).encode()).hexdigest()
     if (env := cache / (name if name else _id[:8])) not in cache.glob("*/") or F:
-        sys.stderr.write(f"generating new vivenv -> {env.name}\n")
-        venv.create(env, prompt=f"viv-{name}", symlinks=True, clear=True)
-        kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if V else (-1, 2))))
+        i("sys").stderr.write(f"generating new vivenv -> {env.name}\n")
+        i("venv").create(env, prompt=f"viv-{name}", symlinks=True, clear=True)
+        run_kw = dict(zip(("stdout", "stderr"), ((None,) * 2 if V else (-1, 2))))
         cmd = ["pip", "--python", str(env / "bin" / "python"), "install", *spec]
-        if (not no_st) and (not [x for x in spec if x.startswith("setuptools")]):
-            cmd.append("setuptools")
-        p = run(cmd, **kw)
-        if (rc := p.returncode) != 0:
-            if env.is_dir():
-                shutil.rmtree(env)
-            sys.stderr.write(f"pip had non zero exit ({rc})\n{p.stdout.decode()}\n")
-            sys.exit(rc)
-        meta.update(dict(id=_id, spec=spec, exe=exe, name=name, files=[runner]))
+        _if(ST, lambda: cmd.append("setuptools"))
+        if (rc := (p := i("subprocess").run(cmd, **run_kw)).returncode) != 0:
+            _if(env.is_dir(), lambda: i("shutil").rmtree(env))
+            q(f"pip had non zero exit ({rc})\n{p.stdout.decode()}\n")
+        add_meta(id=_id, spec=spec, exe=exe, name=name)
     else:
-        meta = json.loads((env / "vivmeta.json").read_text())
-        meta.update(dict(accessed=t, files=sorted({*meta["files"], runner})))
-    (env / "vivmeta.json").write_text(json.dumps(meta))
-    site.addsitedir(sitepkgs := str(*(env / "lib").glob("py*/si*")))
+        meta = i("json").loads((env / "vivmeta.json").read_text())
+    add_meta(accessed=now, files=sorted({*meta.get("files", []), p_str(__file__)}))
+    (env / "vivmeta.json").write_text(i("json").dumps(meta))
+    i("site").addsitedir(sitepkgs := str(*(env / "lib").glob("py*/si*")))
     sys.path = [sitepkgs, *filter(nopkgs, sys.path)]
-
     return env
 """
 

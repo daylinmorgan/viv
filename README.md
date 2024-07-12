@@ -129,12 +129,12 @@ python3 <(curl -fsSL viv.dayl.in/viv.py) run \
   -s https://gist.githubusercontent.com/cs01/fa721a17a326e551ede048c5088f9e0f/raw/6bdfbb6e9c1132b1c38fdd2f195d4a24c540c324/pipx-demo.py
 ```
 
-## Bonus: use `viv` with just standalone snippet (37LOC)
+## Bonus: use `viv` with just standalone snippet (30LOC)
 
 `--standalone` will auto-generate a mini-function version of `viv`
 to accomplish the same basic task as using a local copy of `viv`.
 After generating this standalone shim you can freely use this script
-across Unix machines which have Python > 3.8.
+across Unix machines which have Python > 3.8 and pip.
 See [examples/black](https://github.com/daylinmorgan/viv/blob/dev/examples/black)
 for output of the below command.
 
