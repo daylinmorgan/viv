@@ -3862,6 +3862,7 @@ class Cli:
 
         self._validate_args(args)
         func = args.__dict__.pop("func")
+        _pip_check()
         func(
             **vars(args),
         )
@@ -3873,9 +3874,27 @@ def _pip_check():
         err_quit("viv requires pip to be installed")
 
     # importing viv may have side effects I'm not aware of...
-    if Version((pip_version := __import__("pip").__version__)) not in SpecifierSet(
-        pip_version_requirement
-    ):
+    try:
+        pip_version = __import__("pip").__version__
+    except ModuleNotFoundError:
+        cmd = ["pip", "--version"]
+        p = subprocess.run(
+            cmd,
+            text=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
+        )
+
+        if p.returncode != 0:
+            a.subprocess(cmd, p.stdout)
+            err_quit("viv failed to get version from pip, see above")
+        if not p.stdout.startswith("pip"):
+            a.subprocess(cmd, p.stdout)
+            err_quit("unexpected output from pip, see above")
+
+        pip_version = p.stdout.split()[1]
+
+    if Version(pip_version) not in SpecifierSet(pip_version_requirement):
         err_quit(
             f"viv requires pip version {pip_version_requirement} but got {pip_version}"
         )
@@ -3892,7 +3911,6 @@ def _no_traceback_excepthook(
 
 def main() -> None:
     try:
-        _pip_check()
         viv = Viv()
         Cli(viv).run()
     except KeyboardInterrupt:
