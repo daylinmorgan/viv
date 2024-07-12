@@ -11,6 +11,7 @@ def test_use():
     use("pyjokes")
     import pyjokes  # noqa
 
+    # sample is installed in the test venv which should be removed from sys.path
     with pytest.raises(ImportError):
         from sample.simple import add_one  # noqa
 
