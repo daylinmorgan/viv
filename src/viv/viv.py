@@ -1976,7 +1976,7 @@ class CustomFileHandler(RotatingFileHandler):
         super().emit(record)
 
 
-def gen_logger() -> logging.Logger:
+def _gen_logger() -> logging.Logger:
     logger = logging.getLogger("viv")
     if not logger.handlers:
         logger.setLevel(logging.DEBUG)
@@ -1998,7 +1998,7 @@ def gen_logger() -> logging.Logger:
     return logger
 
 
-log = gen_logger()
+log = _gen_logger()
 
 
 def err_quit(*msg: str, code: int = 1) -> NoReturn:
@@ -2163,9 +2163,7 @@ if __name__ == "__main__":
 
 
 # TODO: convert the below functions into a proper file/stream logging interface
-def echo(
-    msg: str, style: str = "magenta", newline: bool = True, fd: TextIO = sys.stderr
-) -> None:
+def echo(msg: str, fd: TextIO = sys.stderr) -> None:
     """output general message to stdout"""
     output = f"{a.prefix} {a.sep} {msg}\n"
     fd.write(output)
@@ -2197,7 +2195,6 @@ def confirm(question: str, context: str = "", yes: bool = False) -> bool:
         elif ans in ("n", "no"):
             return False
         sys.stderr.write("Please select (Y)es or (n)o. ")
-    sys.stderr.write("\n")
 
 
 class CustomHelpFormatter(RawDescriptionHelpFormatter, HelpFormatter):
@@ -2432,7 +2429,7 @@ def subprocess_run_quit(command: List[str | Path], **kwargs: Any) -> None:
     sys.exit(subprocess.run(command, **kwargs).returncode)
 
 
-def get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
+def _get_hash(spec: Tuple[str, ...] | List[str], track_exe: bool = False) -> str:
     """generate a hash of package specifications
 
     Args:
@@ -2519,10 +2516,10 @@ class ViVenv:
         self.loaded = False
         if not skip_validation:
             spec = self._validate_spec(spec)
-        id = id if id else get_hash(spec, track_exe)
+        id = id if id else _get_hash(spec, track_exe)
 
         self.name = name if name else id[:8]
-        self.set_path(path)
+        self._set_paths(path)
 
         if not metadata:
             if self.name in (d.name for d in Cfg().cache_venv.iterdir()):
@@ -2553,7 +2550,7 @@ class ViVenv:
         if self.name in (d.name for d in Cfg().cache_venv.iterdir()):
             self.loaded = True
 
-    def set_path(self, path: Path | None = None) -> None:
+    def _set_paths(self, path: Path | None = None) -> None:
         self.path = path if path else Cfg().cache_venv / self.name
         self.python = str(
             (self.path / system.bin_dir / system.bin("python")).absolute()
@@ -2671,13 +2668,13 @@ class ViVenv:
             _update_cache(run_mode=run_mode, tmpdir=tmpdir)
 
         try:
-            self.set_path(Cfg().cache_venv / self.name)
+            self._set_paths(Cfg().cache_venv / self.name)
             self.ensure()
             self.touch()
             yield
 
         finally:
-            self.set_path(_path)
+            self._set_paths(_path)
 
     def show(self, size_pad: int) -> None:
         _id = (
@@ -2730,7 +2727,7 @@ class ViVenv:
         sys.stdout.write("\n".join(rows) + "\n")
 
 
-def get_caller_path() -> Path:
+def _get_caller_path() -> Path:
     """get callers callers file path"""
     # viv.py is fist in stack since function is used in `viv.use()`
     import inspect  # noqa
@@ -2753,7 +2750,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
 
     vivenv = ViVenv([*list(packages), *Env().viv_spec], track_exe=track_exe, name=name)
     with vivenv.use():
-        vivenv.meta.addfile(get_caller_path())
+        vivenv.meta.addfile(_get_caller_path())
         vivenv.meta.write()
         vivenv.activate()
     return vivenv.path
@@ -2761,7 +2758,7 @@ def use(*packages: str, track_exe: bool = False, name: str = "") -> Path:
 
 def run() -> Path:
     """create a vivenv and append to sys.path using embedded metadata"""
-    source = get_caller_path().read_text()
+    source = _get_caller_path().read_text()
     metadata = _read_metadata_block(source)
     deps = metadata.get("dependencies", [])
     if requires := metadata.get("requires-python", ""):
@@ -2769,15 +2766,15 @@ def run() -> Path:
     return use(*deps)
 
 
-def combined_spec(reqs: List[str], requirements: Path) -> List[str]:
+def _combined_spec(reqs: List[str], requirements: Path) -> List[str]:
     if requirements:
         with requirements.open("r") as f:
             reqs += f.readlines()
     return reqs
 
 
-def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
-    spec = combined_spec(reqs, requirements)
+def _resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
+    spec = _combined_spec(reqs, requirements)
 
     cmd = [
         system.bin("pip"),
@@ -2806,7 +2803,7 @@ def resolve_deps(reqs: List[str], requirements: Path) -> List[str]:
     return resolved_spec
 
 
-def fetch_script(url: str) -> str:
+def _fetch_script(url: str) -> str:
     from urllib.error import HTTPError  # noqa
     from urllib.request import urlopen  # noqa
 
@@ -2823,8 +2820,8 @@ def fetch_script(url: str) -> str:
     return r.read().decode("utf-8")
 
 
-def fetch_source(reference: str) -> str:
-    src = fetch_script(
+def _fetch_source(reference: str) -> str:
+    src = _fetch_script(
         "https://raw.githubusercontent.com/daylinmorgan/viv/"
         + reference
         + "/src/viv/viv.py"
@@ -2841,7 +2838,7 @@ def fetch_source(reference: str) -> str:
     return sha256
 
 
-def make_executable(path: Path) -> None:
+def _mark_executable(path: Path) -> None:
     """apply an executable bit for all users with read access"""
     mode = os.stat(path).st_mode
     mode |= (mode & 0o444) >> 2  # copy R bits to X
@@ -3041,7 +3038,7 @@ class Script:
                 script_text = scriptpath.read_text()
             else:
                 scriptpath = tmppath / self.name
-                script_text = fetch_script(self.path)
+                script_text = _fetch_script(self.path)
                 scriptpath.write_text(script_text)
 
             mode = _uses_viv(script_text)
@@ -3060,7 +3057,7 @@ class Script:
             if not self.viv.local_source and mode != _Viv_Mode.NONE:
                 log.debug("fetching remote copy to use for python api")
                 (tmppath / "viv.py").write_text(
-                    fetch_script(
+                    _fetch_script(
                         "https://raw.githubusercontent.com/daylinmorgan/viv/latest/src/viv/viv.py"
                     )
                 )
@@ -3194,7 +3191,7 @@ class Viv:
     ) -> None:
         """create import statement from package spec"""
 
-        spec = resolve_deps(reqs, requirements)
+        spec = _resolve_deps(reqs, requirements)
         if keep:
             vivenv = ViVenv(spec)
             with vivenv.use():
@@ -3301,7 +3298,7 @@ class Viv:
     def _install_local_src(self, sha256: str, src: Path, cli: Path, yes: bool) -> None:
         log.info("updating local source copy of viv")
         shutil.copy(Cfg().cache_src / f"{sha256}.py", src)
-        make_executable(src)
+        _mark_executable(src)
         log.info("symlinking cli")
 
         if cli.is_file():
@@ -3321,7 +3318,7 @@ class Viv:
 
     def _get_new_version(self, ref: str) -> Tuple[str, str]:
         sys.path.append(str(Cfg().cache_src))
-        return (sha256 := fetch_source(ref)), __import__(sha256).__version__
+        return (sha256 := _fetch_source(ref)), __import__(sha256).__version__
 
     def cmd_manage(self) -> None:
         """manage viv itself"""
@@ -3476,9 +3473,9 @@ class Viv:
         output = Env().viv_bin_dir / bin if not output else output.absolute()
 
         if freeze:
-            spec = resolve_deps(reqs, requirements)
+            spec = _resolve_deps(reqs, requirements)
         else:
-            spec = combined_spec(reqs, requirements)
+            spec = _combined_spec(reqs, requirements)
 
         if output.is_file():
             log.warning(f"{output} already exists")
@@ -3490,7 +3487,7 @@ class Viv:
             output.parent.mkdir(exist_ok=True, parents=True)
             with output.open("w") as f:
                 f.write(self.t.shim(path, self.local_source, standalone, spec, bin))
-            make_executable(output)
+            _mark_executable(output)
             if generate:
                 vivenv = ViVenv(spec)
                 with vivenv.use():
@@ -3517,7 +3514,7 @@ class Viv:
         note: any args after `-s <python script>` will be passed on
         """
 
-        spec = combined_spec(reqs, requirements)
+        spec = _combined_spec(reqs, requirements)
 
         if script:
             Script(path=script, spec=spec, keep=keep, rest=rest, viv=self).run()
